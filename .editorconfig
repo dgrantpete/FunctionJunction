@@ -1,0 +1,8 @@
+[*.cs]
+csharp_style_namespace_declarations = file_scoped:error
+indent_style = space
+end_of_line = crlf
+
+[*.csproj]
+indent_style = tab
+end_of_line = crlf

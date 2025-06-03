@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36127.28
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FunctionalEngine.Generator", "FunctionalEngine.Generator\FunctionalEngine.Generator.csproj", "{A0625C00-9D86-B114-A0CD-8D384357FE1B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FunctionalEngine", "FunctionalEngine\FunctionalEngine.csproj", "{1D9A8E18-AAD4-46DC-A335-3DEA7DC391A0}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A0625C00-9D86-B114-A0CD-8D384357FE1B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A0625C00-9D86-B114-A0CD-8D384357FE1B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A0625C00-9D86-B114-A0CD-8D384357FE1B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A0625C00-9D86-B114-A0CD-8D384357FE1B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1D9A8E18-AAD4-46DC-A335-3DEA7DC391A0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1D9A8E18-AAD4-46DC-A335-3DEA7DC391A0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1D9A8E18-AAD4-46DC-A335-3DEA7DC391A0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1D9A8E18-AAD4-46DC-A335-3DEA7DC391A0}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {C989018A-A36C-4F33-B079-89C4B2FD05EC}
+	EndGlobalSection
+EndGlobal
