@@ -1,1 +1,39 @@
-﻿
+﻿{{~ if attribute_settings.generate_match ~}}
+using System;
+{{~ end ~}}
+{{~ if attribute_settings.generate_polymorphic_serialization ~}}
+using System.Text.Json.Serialization;
+{{~ end ~}}
+
+namespace {{ namespace }} 
+{
+    {{~ if attribute_settings.generate_polymorphic_serialization ~}}
+    {{~ for member in members ~}}
+    {{~ if member.should_generate_serializer_attribute ~}}
+    [JsonDerivedType(typeof({{ member.name }}))]
+    {{~ end ~}}
+    {{~ end ~}}
+    {{~ end ~}}
+    partial {{ string.downcase type }} {{ name }}
+    {
+        {{~ if attribute_settings.generate_private_constructor ~}}
+        private {{ name }}() { }
+
+        {{~ end ~}}
+        {{~ if attribute_settings.generate_match ~}}
+        public TResult Match<TResult>(
+            {{~ for member in members ~}}
+            Func<{{member.name}}, TResult> on{{member.name}}{{ if !for.last }},{{ end }}
+            {{~ end ~}}
+        ) => 
+            this switch
+            {
+                {{~ for member in members ~}}
+                {{ member.name }} value => on{{ member.name }}(value),
+                {{~ end ~}}
+                _ => throw new InvalidOperationException($"Type '{typeof(this)}' was not a known variant of the discriminated union '{{ name }}' and was unhandled.")
+            };
+
+        {{~ end ~}}
+    }
+}

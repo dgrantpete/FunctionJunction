@@ -1,13 +1,18 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 
-namespace FunctionalEngine.Generator.Implementations;
+namespace FunctionalEngine.Generator.Internal;
 
-internal readonly record struct EquatableArray<T>(ImmutableArray<T> Array) : IEquatable<EquatableArray<T>> where T : IEquatable<T>
+internal readonly record struct EquatableArray<T>(ImmutableArray<T> Array) : IEnumerable<T>, IEquatable<EquatableArray<T>> where T : IEquatable<T>
 {
     public bool Equals(EquatableArray<T> other) =>
         Array.AsSpan().SequenceEqual(other.Array.AsSpan());
+
+    public IEnumerator<T> GetEnumerator() => Array.AsEnumerable()
+        .GetEnumerator();
 
     public override int GetHashCode()
     {
@@ -20,6 +25,8 @@ internal readonly record struct EquatableArray<T>(ImmutableArray<T> Array) : IEq
 
         return hash.ToHashCode();
     }
+
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
     public static implicit operator EquatableArray<T>(ImmutableArray<T> array) => new(array);
 }
