@@ -4,9 +4,9 @@ internal static class DiscriminatedUnionDefaults
 {
     public const string TemplateName = "DiscriminatedUnion.sbn";
 
-    public const string AttributeName = $"{nameof(FunctionalEngine)}.{nameof(DiscriminatedUnionAttribute)}";
+    public static string AttributeName { get; } = typeof(DiscriminatedUnionAttribute).FullName;
 
-    public const bool GenerateMatch = true;
+    public static MatchUnionOn MatchOn { get; } = MatchUnionOn.Type;
 
     public const bool GeneratePolymorphicSerialization = true;
 

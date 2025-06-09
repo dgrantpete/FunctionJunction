@@ -45,7 +45,17 @@ internal static class Diagnostics
         id: "FJ0005",
         title: "Switch expressions not supported on targeted C# version",
         messageFormat: "Switch expressions are required to generate 'Match' method but are not supported on the C# version you've set ({0}); " +
-        "upgrade C# version to 8.0 or greater or set 'GenerateMatch' to 'false'",
+        "upgrade C# version to 8.0 or greater or set 'MatchOn' to 'None'",
+        category: "Usage",
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true
+    );
+
+    public static DiagnosticDescriptor GenericsIncompatibleWithSerialization { get; } = new(
+        id: "FJ0006",
+        title: "Can't generate 'JsonDerivedTypeAttribute' for generic type",
+        messageFormat: "'JsonDerivedTypeAttribute' cannot be generated for a generic discriminated union; " +
+        "set 'GeneratePolymorphicSerialization' to 'false'",
         category: "Usage",
         DiagnosticSeverity.Warning,
         isEnabledByDefault: true
