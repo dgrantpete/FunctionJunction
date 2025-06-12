@@ -7,7 +7,7 @@
 		<Nullable>enable</Nullable>
 		<FunctionalEngine_Defaults_GeneratePrivateConstructor>true</FunctionalEngine_Defaults_GeneratePrivateConstructor>
 		<FunctionalEngine_Defaults_MatchOn>Properties</FunctionalEngine_Defaults_MatchOn>
-		<FunctionalEngine_Defaults_GeneratePolymorphicSerialization>false</FunctionalEngine_Defaults_GeneratePolymorphicSerialization>
+		<FunctionalEngine_Defaults_GeneratePolymorphicSerialization>true</FunctionalEngine_Defaults_GeneratePolymorphicSerialization>
 	</PropertyGroup>
 
 	<ItemGroup>

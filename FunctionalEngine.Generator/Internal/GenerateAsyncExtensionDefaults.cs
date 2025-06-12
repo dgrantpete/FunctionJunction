@@ -1,0 +1,8 @@
+﻿namespace FunctionalEngine.Generator.Internal;
+
+internal static class GenerateAsyncExtensionDefaults
+{
+    public const string TemplateName = "AsyncExtensionMethod.sbn";
+
+    public static string AttributeName { get; } = typeof(GenerateAsyncExtensionAttribute).FullName;
+}

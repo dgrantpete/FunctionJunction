@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FunctionalEngine.Generator"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FunctionalEngine", "FunctionalEngine\FunctionalEngine.csproj", "{1D9A8E18-AAD4-46DC-A335-3DEA7DC391A0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FunctionalEngine.Tests", "FunctionalEngine.Tests\FunctionalEngine.Tests.csproj", "{5446FF48-64B5-4751-9910-09CD1273CC14}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{1D9A8E18-AAD4-46DC-A335-3DEA7DC391A0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1D9A8E18-AAD4-46DC-A335-3DEA7DC391A0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1D9A8E18-AAD4-46DC-A335-3DEA7DC391A0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5446FF48-64B5-4751-9910-09CD1273CC14}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5446FF48-64B5-4751-9910-09CD1273CC14}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5446FF48-64B5-4751-9910-09CD1273CC14}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5446FF48-64B5-4751-9910-09CD1273CC14}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -203,7 +203,7 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
 
         var explicitConstructor = namedType.InstanceConstructors
             .FirstOrDefault(constructor => !constructor.IsImplicitlyDeclared);
-
+        
         if (attributeSettings.GeneratePrivateConstructor && explicitConstructor is { })
         {
             var diagnostic = Diagnostic.Create(

@@ -6,8 +6,12 @@ using System.Linq;
 
 namespace FunctionalEngine.Generator.Internal;
 
-internal readonly record struct EquatableArray<T>(ImmutableArray<T> Array) : IEnumerable<T>, IEquatable<EquatableArray<T>> where T : IEquatable<T>
+internal readonly record struct EquatableArray<T>(ImmutableArray<T> Array) : IReadOnlyList<T>, IEquatable<EquatableArray<T>> where T : IEquatable<T>
 {
+    public T this[int index] => Array[index];
+
+    public int Count => Array.Length;
+
     public bool Equals(EquatableArray<T> other) =>
         Array.AsSpan().SequenceEqual(other.Array.AsSpan());
 

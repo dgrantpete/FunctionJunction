@@ -15,7 +15,10 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Bcl.HashCode" Version="6.0.0" />
+		<PackageReference Include="Microsoft.Bcl.HashCode" Version="6.0.0">
+			<GeneratePathProperty>true</GeneratePathProperty>
+			<PrivateAssets>all</PrivateAssets>
+		</PackageReference>
 		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="4.14.0">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -30,11 +33,17 @@
 		<PackageReference Include="Scriban" Version="6.2.1" IncludeAssets="build" PrivateAssets="all" />
 	</ItemGroup>
 
+	<Target Name="CopyHashCodeDll" AfterTargets="Build">
+		<ItemGroup>
+			<_Hash Include="$(PkgMicrosoft_Bcl_HashCode)\lib\netstandard2.0\Microsoft.Bcl.HashCode.dll" />
+		</ItemGroup>
+
+		<Copy SourceFiles="@(_Hash)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+	</Target>
+
 	<ItemGroup>
-		<None Include="DiscriminatedUnionAttribute.cs"
-			  Pack="true"
-			  PackagePath="contentFiles/cs/any/"
-			  BuildAction="Compile" />
+		<None Include="DiscriminatedUnionAttribute.cs" Pack="true" PackagePath="contentFiles/cs/any/" BuildAction="Compile" />
+		<None Include="GenerateAsyncExtensionAttribute.cs" Pack="true" PackagePath="contentFiles/cs/any/" BuildAction="Compile" />
 	</ItemGroup>
 
 	<ItemGroup>
