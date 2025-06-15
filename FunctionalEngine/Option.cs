@@ -1,4 +1,5 @@
 ﻿using FunctionalEngine.Generator;
+using System.Diagnostics.CodeAnalysis;
 using static FunctionalEngine.Functions;
 
 namespace FunctionalEngine;
@@ -26,11 +27,12 @@ public readonly record struct Option<T> where T : notnull
     public TResult Match<TResult>(
         Func<T, TResult> onSome,
         Func<TResult> onNone
-    ) => IsSome switch
-    {
-        true => onSome(internalValue),
-        false => onNone()
-    };
+    ) => 
+        IsSome switch
+        {
+            true => onSome(internalValue),
+            false => onNone()
+        };
 
     [GenerateAsyncExtension]
     public Option<TResult> FlatMap<TResult>(Func<T, Option<TResult>> mapper) where TResult : notnull =>
@@ -71,27 +73,27 @@ public readonly record struct Option<T> where T : notnull
         });
 
     [GenerateAsyncExtension]
-    public Option<T> Or(Func<Option<T>> alternativeProvider) =>
+    public Option<T> Or(Func<Option<T>> otherProvider) =>
         Match(
             value => new(value),
-            alternativeProvider
+            otherProvider
         );
 
     [GenerateAsyncExtension]
-    public Task<Option<T>> OrAsync(Func<Task<Option<T>>> alternateProviderAsync) =>
+    public Task<Option<T>> OrAsync(Func<Task<Option<T>>> otherProviderAsync) =>
         Match(
             value => Task.FromResult(new Option<T>(value)),
-            alternateProviderAsync
+            otherProviderAsync
         );
 
     [GenerateAsyncExtension]
-    public Option<(T Left, TOther Right)> And<TOther>(Func<Option<TOther>> optionProvider) where TOther : notnull =>
-        FlatMap(value => optionProvider().Map(otherValue => (value, otherValue)));
+    public Option<(T Left, TOther Right)> And<TOther>(Func<Option<TOther>> otherProvider) where TOther : notnull =>
+        FlatMap(value => otherProvider().Map(otherValue => (value, otherValue)));
 
     [GenerateAsyncExtension]
-    public Task<Option<(T Left, TOther Right)>> AndAsync<TOther>(Func<Task<Option<TOther>>> optionProvider) where TOther : notnull =>
+    public Task<Option<(T Left, TOther Right)>> AndAsync<TOther>(Func<Task<Option<TOther>>> otherProviderAsync) where TOther : notnull =>
         FlatMapAsync(async value => 
-            (await optionProvider())
+            (await otherProviderAsync())
                 .Map(otherValue => (value, otherValue))
         );
 
@@ -128,17 +130,17 @@ public readonly record struct Option<T> where T : notnull
         });
 
     [GenerateAsyncExtension]
-    public T UnwrapOr(Func<T> defaultValueProvider) =>
+    public T UnwrapOr(Func<T> defaultProvider) =>
         Match(
             Identity,
-            defaultValueProvider
+            defaultProvider
         );
 
     [GenerateAsyncExtension]
-    public Task<T> UnwrapOrAsync(Func<Task<T>> defaultValueProviderAsync) =>
+    public Task<T> UnwrapOrAsync(Func<Task<T>> defaultProviderAsync) =>
         Match(
             Task.FromResult,
-            defaultValueProviderAsync
+            defaultProviderAsync
         );
 
     [GenerateAsyncExtension]
@@ -150,15 +152,18 @@ public readonly record struct Option<T> where T : notnull
         UnwrapOrAsync(async () => throw await exceptionProvider());
 
     [GenerateAsyncExtension]
-    public T UnwrapOrThrow() => UnwrapOrThrow(() => 
-        new InvalidOperationException($"Could not unwrap Option<{typeof(T).Name}> because it doesn't contain a value")
-    );
-
-    public IEnumerable<T> ToEnumerable() =>
-        Match<IEnumerable<T>>(
-            value => [value],
-            () => []
+    public T UnwrapOrThrow() => 
+        UnwrapOrThrow(() => 
+            new InvalidOperationException($"Could not unwrap 'Option<{typeof(T).Name}>' because it doesn't contain a maybeValue")
         );
+
+    public IEnumerable<T> ToEnumerable()
+    {
+        if (IsSome)
+        {
+            yield return internalValue;
+        }
+    }
 }
 
 public static class Option
@@ -167,17 +172,54 @@ public static class Option
 
     public static Option<T> Some<T>(T value) where T : notnull => new(value);
 
+    public static async Task<Option<T>> SomeAsync<T>(Task<T> valueTask) where T : notnull => 
+        Some(await valueTask);
+
+    public static Result<T, TError> ToResult<T, TError>(this Option<T> option, Func<TError> errorProvider)
+        where T : notnull
+    =>
+        option.Match(
+            Result.ApplyType<TError>.Ok,
+            Compose(errorProvider, Result.ApplyType<T>.Error)
+        );
+
+    public static Result<TOk, T> ToErrorResult<TOk, T>(this Option<T> option, Func<TOk> okProvider)
+        where T : notnull
+    =>
+        option.Match(
+            Result.ApplyType<TOk>.Error,
+            Compose(okProvider, Result.ApplyType<T>.Ok)
+        );
+
+    [GenerateAsyncExtension]
     public static T? UnwrapNullable<T>(this Option<T> option) where T : class =>
         option.Match<T?>(
             value => value,
             () => null
         );
 
+    [GenerateAsyncExtension]
     public static T? UnwrapNullableValue<T>(this Option<T> option) where T : struct =>
         option.Match<T?>(
             value => value,
             () => null
         );
+
+    public static bool TryUnwrap<T>(this Option<T> option, [NotNullWhen(true)] out T? value) where T : notnull
+    {
+        var isSome = false;
+        var maybeValue = default(T?);
+
+        option.Tap(value =>
+        {
+            isSome = true;
+            maybeValue = value;
+        });
+
+        value = maybeValue;
+
+        return isSome;
+    }
 
     public static Option<T> FromNullable<T>(T? value) where T : class => value switch
     {
@@ -185,60 +227,19 @@ public static class Option
         null => default
     };
 
-    public static Option<T> FromNullable<T>(T? value) where T : struct => value switch
+    public static async Task<Option<T>> FromNullableAsync<T>(Task<T?> valueTask) where T : class => await valueTask switch
     {
-        { } notNullValue => new(notNullValue),
+        { } value => new(value),
         null => default
     };
 
+    public static async Task<Option<T>> FromNullableAsync<T>(Task<T?> valueTask) where T : struct => await valueTask switch
+    {
+        { } value => new(value),
+        null => default
+    };
+
+    [GenerateAsyncExtension]
     public static Option<T> Flatten<T>(this Option<Option<T>> option) where T : notnull =>
         option.FlatMap(Identity);
-
-    public static Option<TResult> FlatMapTuple<T1, T2, TResult>(this Option<(T1, T2)> option, Func<T1, T2, Option<TResult>> mapper)
-        where T1 : notnull
-        where T2 : notnull
-        where TResult : notnull
-    =>
-        option.FlatMap(tuple => mapper(tuple.Item1, tuple.Item2));
-
-    public static Option<TResult> FlatMapTuple<T1, T2, T3, TResult>(this Option<(T1, T2, T3)> option, Func<T1, T2, T3, Option<TResult>> mapper)
-        where T1 : notnull
-        where T2 : notnull
-        where T3 : notnull
-        where TResult : notnull
-    =>
-        option.FlatMap(tuple => mapper(tuple.Item1, tuple.Item2, tuple.Item3));
-
-    public static Option<TResult> FlatMapTuple<T1, T2, T3, T4, TResult>(this Option<(T1, T2, T3, T4)> option, Func<T1, T2, T3, T4, Option<TResult>> mapper)
-        where T1 : notnull
-        where T2 : notnull
-        where T3 : notnull
-        where T4 : notnull
-        where TResult : notnull
-    =>
-        option.FlatMap(tuple => mapper(tuple.Item1, tuple.Item2, tuple.Item3, tuple.Item4));
-
-    public static Option<TResult> MapTuple<T1, T2, TResult>(this Option<(T1, T2)> option, Func<T1, T2, TResult> mapper)
-        where T1 : notnull
-        where T2 : notnull
-        where TResult : notnull
-    =>
-        option.FlatMapTuple(Compose(mapper, Some));
-
-    public static Option<TResult> MapTuple<T1, T2, T3, TResult>(this Option<(T1, T2, T3)> option, Func<T1, T2, T3, TResult> mapper)
-        where T1 : notnull
-        where T2 : notnull
-        where T3 : notnull
-        where TResult : notnull
-    =>
-        option.FlatMapTuple(Compose(mapper, Some));
-
-    public static Option<TResult> MapTuple<T1, T2, T3, T4, TResult>(this Option<(T1, T2, T3, T4)> option, Func<T1, T2, T3, T4, TResult> mapper)
-        where T1 : notnull
-        where T2 : notnull
-        where T3 : notnull
-        where T4 : notnull
-        where TResult : notnull
-    =>
-        option.FlatMapTuple(Compose(mapper, Some));
 }

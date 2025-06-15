@@ -1,4 +1,6 @@
-﻿{{~ if attribute_settings.generate_match ~}}
+﻿#nullable enable
+
+{{~ if attribute_settings.generate_match ~}}
 using System;
 {{~ end ~}}
 {{~ if attribute_settings.generate_polymorphic_serialization ~}}
@@ -31,7 +33,7 @@ namespace {{ namespace }}
                 {{~ for member in members ~}}
                 {{ member.name.with_generics }} value => on{{ member.name.plain }}(value),
                 {{~ end ~}}
-                _ => throw new InvalidOperationException($"Type '{this.GetType()}' was not a known variant of the discriminated union '{{ name.with_generics }}' and was unhandled.")
+                _ => throw new InvalidOperationException($"Type '{this.GetType()}' was not a known variant of the discriminated union '{{ name.with_generics }}' and was unhandled")
             };
 
         {{~ else if attribute_settings.match_on == "Properties" ~}}

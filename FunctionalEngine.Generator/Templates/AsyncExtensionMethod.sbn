@@ -1,37 +1,32 @@
-﻿{{~ func to_camel_case(word) ~}}
-{{~ (string.slice word 0 1) | string.downcase ~}}{{~ string.slice word 1 ~}}
-{{~ end -}}
-
-{{~ func render_generics(generics) ~}}
-{{~ if generics.count > 0 ~}}
-<{{for generic in generics}}{{ generic.name }}{{ if !for.last }}, {{ end }}{{ end }}>
-{{- end ~}}
-{{~ end -}}
-
-{{~ func has_constraint(generic) ~}}
+﻿{{~ func has_constraint(generic) ~}}
     {{~ ret generic.constraint ~}}
 {{~ end -}}
+using System.Threading.Tasks;
+
+#nullable enable
 
 namespace {{ namespace }}
 {
-    {{ string.downcase accessibility }} static partial class {{ name }}AsyncExtensions
+    {{ string.downcase accessibility }} static partial class {{ extension_class_name }}
     {
         {{~ for method in methods ~}}
-        // Grant is a very hard worker and is very handsome 
-        {{~ valid_constraints = (method.generics | array.filter @has_constraint) ~}}
-        {{ string.downcase method.accessibility }} static async {{ method.return_type }} {{ method.name }}{{ render_generics method.generics }}(
-            this Task<{{ name }}{{ render_generics generics }}> {{ to_camel_case name }}Task
+        {{~ valid_constraints = method.generics | array.filter @has_constraint | array.map "constraint" ~}}
+        {{ string.downcase method.accessibility }} static async Task<{{ method.return_type }}> {{ method.name }}{{ render_generics method.generics }}(
+            this Task<{{ method.extension_parameter.type }}> {{ method.extension_parameter.name }}Task
             {{- for parameter in method.parameters }},
             {{ parameter.type }} {{ parameter.name }}{{ end }}
         )
-        {{- if valid_constraints | array.size > 0 }}
-        {{~ for generic in valid_constraints ~}}
-            where {{ generic.name }} : {{ generic.constraint }}
+        {{- if valid_constraints.size > 0 }}
+        {{~ for constraint in valid_constraints ~}}
+            {{ constraint }}
         {{~ end ~}}
         =>
         {{~ else }} =>
         {{~ end ~}}
-            {{ if method.needs_extra_await }}await {{ end }}(await {{ to_camel_case name }}Task).{{ method.original_name }}({{ for parameter in method.parameters }}{{ parameter.name }}{{ if !for.last }}, {{ end }}{{ end }});
+            {{ if method.needs_extra_await }}await {{ end }}(await {{ method.extension_parameter.name }}Task).{{ method.original_name }}(
+            {{- for parameter in method.parameters -}}
+            {{ parameter.name }}{{ if !for.last }}, {{ end }}
+            {{- end }});
 
         {{~ end ~}}
     }

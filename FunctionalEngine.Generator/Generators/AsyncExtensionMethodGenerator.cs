@@ -2,6 +2,7 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Scriban;
+using Scriban.Runtime;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -14,7 +15,7 @@ namespace FunctionalEngine.Generator.Generators;
 [Generator("C#")]
 internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
 {
-    private static readonly Lazy<Template> template = new(() =>
+    private static readonly Lazy<Template> template = new(static () =>
     {
         var assembly = typeof(AsyncExtensionMethodGenerator).Assembly;
 
@@ -35,42 +36,66 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
         var methodInfoProvider = context.SyntaxProvider
                 .ForAttributeWithMetadataName(
                     GenerateAsyncExtensionDefaults.AttributeName,
-                    (node, _) => node is MethodDeclarationSyntax,
+                    static (node, _) => node is MethodDeclarationSyntax,
                     GetMethodInfo
                 )
-                .SelectMany<MethodInfo?, MethodInfo>((maybeMethodInfo, _) => maybeMethodInfo switch
+                .SelectMany<MethodInfo?, MethodInfo>(static (maybeMethodInfo, _) => maybeMethodInfo switch
                 {
                     null => [],
                     { } methodInfo => [methodInfo]
                 });
 
         var renderModelProvider = methodInfoProvider.Collect()
-            .SelectMany((methodInfo, _) =>
+            .SelectMany(static (methodInfo, _) =>
                 methodInfo.GroupBy(
-                    methodInfo => methodInfo.ContainingClass,
-                    CreateRenderModel
+                    methodInfo => (
+                        ExtensionClassName: string.Format(
+                            methodInfo.AttributeSettings.ExtensionClassName, 
+                            methodInfo.ContainingClass.Name
+                        ),
+                        methodInfo.ContainingClass.Namespace,
+                        methodInfo.Accessibility
+                    ),
+                    (classInfo, methodInfos) => 
+                        CreateClassModel(classInfo.ExtensionClassName, classInfo.Namespace, classInfo.Accessibility, methodInfos)
                 )
             );
 
         context.RegisterSourceOutput(
             renderModelProvider,
-            (context, renderModel) =>
+            static (context, renderModel) =>
             {
-                var generatedCode = template.Value.Render(renderModel);
+                var generatedCode = GenerateCode(renderModel);
 
-                context.AddSource($"{renderModel.Name}AsyncExtensions.g.cs", generatedCode);
+                context.AddSource($"{renderModel.ExtensionClassName}.g.cs", generatedCode);
             }
         );
     }
 
+    private static string GenerateCode(ClassRenderModel renderModel)
+    {
+        var scriptObject = new ScriptObject();
+        scriptObject.Import(typeof(ScribanHelpers));
+        scriptObject.Import(renderModel);
+
+        var templateContext = new TemplateContext();
+        templateContext.PushGlobal(scriptObject);
+
+        return template.Value.Render(templateContext);
+    }
+
     private static MethodInfo? GetMethodInfo(GeneratorAttributeSyntaxContext context, CancellationToken cancellationToken)
     {
-        if (context.TargetSymbol is not IMethodSymbol methodSymbol)
+        if (context.TargetSymbol is not IMethodSymbol methodSymbol
+            || GetMethodType(methodSymbol) is not { } methodType
+            || GetClassInfo(methodSymbol.ContainingType) is not { } classInfo
+            || GetAccessibility(methodSymbol.DeclaredAccessibility) is not { } accessibility
+        )
         {
             return null;
         }
 
-        var classInfo = GetClassInfo(methodSymbol.ContainingType);
+        var attributeSettings = GetAttributeSettings(context.Attributes[0]);
 
         var parameterInfos = methodSymbol.Parameters.Select(GetParameterInfo)
             .ToImmutableArray();
@@ -81,36 +106,105 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
 
         return new(
             methodSymbol.Name,
-            GetClassInfo(methodSymbol.ContainingType),
+            classInfo,
             parameterInfos,
             GetTypeInfo(methodSymbol.ReturnType),
             generics,
-            GetAccessibility(methodSymbol.DeclaredAccessibility)
+            methodType,
+            accessibility,
+            attributeSettings
         );
     }
 
-    private static ClassInfo GetClassInfo(INamedTypeSymbol typeSymbol) =>
-        new(
+    private static AttributeSettings GetAttributeSettings(AttributeData attribute)
+    {
+        var extensionClassName = (string?)attribute.NamedArguments
+            .Select(argument => ((string Name, TypedConstant Constant)?)(argument.Key, argument.Value))
+            .SingleOrDefault(argument => argument?.Name is nameof(GenerateAsyncExtensionAttribute.ExtensionClassName))
+            ?.Constant
+            .Value;
+
+        return new(
+            extensionClassName ?? GenerateAsyncExtensionDefaults.ExtensionClassName
+        );
+    }
+
+    private static MethodType? GetMethodType(IMethodSymbol methodSymbol) => methodSymbol switch
+    {
+        { IsExtensionMethod: true } => MethodType.Extension,
+        { IsStatic: false, MethodKind: MethodKind.Ordinary } => MethodType.Instance,
+        _ => null
+    };
+
+    private static ClassInfo? GetClassInfo(INamedTypeSymbol typeSymbol)
+    {
+        if (GetAccessibility(typeSymbol.DeclaredAccessibility) is not { } accessibility)
+        {
+            return null;
+        }
+
+        return new(
             typeSymbol.Name,
+            typeSymbol.ToDisplayString(),
             typeSymbol.ContainingNamespace.Name,
             typeSymbol.TypeParameters
                 .Select(GetGenericInfo)
                 .ToImmutableArray(),
-            GetAccessibility(typeSymbol.DeclaredAccessibility)
+            accessibility
         );
+    }
 
     private static GenericInfo GetGenericInfo(ITypeParameterSymbol typeParameterSymbol) =>
         new(
             typeParameterSymbol.Name,
-            typeParameterSymbol switch
-            {
-                { HasReferenceTypeConstraint: true } => "class",
-                { HasValueTypeConstraint: true } => "struct",
-                { HasNotNullConstraint: true } => "notnull",
-                { ConstraintTypes: [var constraint] } => constraint.ToDisplayString(),
-                _ => null
-            }
+            GetParameterConstraints(typeParameterSymbol)
         );
+
+    private static string? GetParameterConstraints(ITypeParameterSymbol typeParameterSymbol)
+    {
+        return GetConstraintComponents()
+            .Aggregate(
+                default(string?),
+                (previousConstraints, constraint) => previousConstraints switch
+                {
+                    { } => $"{previousConstraints}, {constraint}",
+                    null => $"where {typeParameterSymbol.Name} : {constraint}"
+                }
+            );
+
+        IEnumerable<string> GetConstraintComponents()
+        {
+            if (typeParameterSymbol.HasReferenceTypeConstraint)
+            {
+                yield return "class";
+            }
+
+            if (typeParameterSymbol.HasValueTypeConstraint)
+            {
+                yield return "struct";
+            }
+
+            if (typeParameterSymbol.HasNotNullConstraint)
+            {
+                yield return "notnull";
+            }
+
+            if (typeParameterSymbol.HasUnmanagedTypeConstraint)
+            {
+                yield return "unmanaged";
+            }
+
+            foreach (var constraint in typeParameterSymbol.ConstraintTypes)
+            {
+                yield return constraint.ToDisplayString();
+            }
+
+            if (typeParameterSymbol.HasConstructorConstraint)
+            {
+                yield return "new()";
+            }
+        }
+    }
 
     private static ParameterInfo GetParameterInfo(IParameterSymbol parameterSymbol) =>
         new(
@@ -141,9 +235,9 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
         {
             var typeArguments = genericSymbol.TypeArguments.Select(GetTypeInfo).ToImmutableArray();
 
-            var name = $"{genericSymbol.ToDisplayString(
-                new SymbolDisplayFormat(genericsOptions: SymbolDisplayGenericsOptions.None)
-            )}<{{0}}>";
+            var displayName = genericSymbol.ToDisplayString(format: new(genericsOptions: SymbolDisplayGenericsOptions.None));
+
+            var name = $"{displayName}<{{0}}>";
 
             return new TypeInfo(name, typeArguments);
         }
@@ -154,20 +248,15 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
         );
     }
 
-    private static Accessibility GetAccessibility(Microsoft.CodeAnalysis.Accessibility accessibility) => accessibility switch
+    private static Accessibility? GetAccessibility(Microsoft.CodeAnalysis.Accessibility accessibility) => accessibility switch
     {
         Microsoft.CodeAnalysis.Accessibility.Public => Accessibility.Public,
         Microsoft.CodeAnalysis.Accessibility.Internal => Accessibility.Internal,
-        _ => throw new InvalidOperationException("Accessibility must be 'Internal' or 'Public'")
+        _ => null
     };
 
     private static string RenderType(TypeInfo type)
     {
-        if (type.TypeParameters is [])
-        {
-            return type.Name;
-        }
-
         var renderedParameters = string.Join(
             ", ",
             type.TypeParameters
@@ -177,43 +266,37 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
         return string.Format(type.Name, renderedParameters);
     }
 
-    private static ClassRenderModel CreateRenderModel(ClassInfo classInfo, IEnumerable<MethodInfo> methodInfos) =>
+    private static ClassRenderModel CreateClassModel(
+        string extensionClassName, 
+        string @namespace, 
+        Accessibility accessibility, 
+        IEnumerable<MethodInfo> methodInfos
+    ) =>
         new(
-            classInfo.Name,
-            classInfo.Namespace,
-            classInfo.Accessibility,
-            classInfo.Generics,
-            methodInfos.Select(CreateMethodRenderModel)
+            extensionClassName,
+            @namespace,
+            accessibility,
+            methodInfos.Select(CreateMethodModel)
                 .ToImmutableArray()
         );
 
-    private static MethodRenderModel CreateMethodRenderModel(MethodInfo methodInfo)
+    private static MethodRenderModel CreateMethodModel(MethodInfo methodInfo)
     {
         var needsExtraAwait = methodInfo.ReturnType.Name.EndsWith("Task<{0}>");
 
         var returnType = needsExtraAwait switch
         {
-            true => methodInfo.ReturnType,
-            false => new TypeInfo(
-                "Task<{0}>",
-                ImmutableArray.Create(methodInfo.ReturnType)
-            )
+            true => methodInfo.ReturnType.TypeParameters[0],
+            false => methodInfo.ReturnType
         };
 
         var renderedReturnType = RenderType(returnType);
 
-        var parameters = methodInfo.Parameters
-            .Select(parameterInfo =>
-                new ParameterRenderModel(
-                    parameterInfo.Name,
-                    RenderType(parameterInfo.Type)
-                )
-            )
-            .ToImmutableArray();
-
         var generics = methodInfo.ContainingClass.Generics
             .Concat(methodInfo.Generics)
             .ToImmutableArray();
+
+        var (extensionParameter, parameters) = CreateParameterModels(methodInfo);
 
         var name = methodInfo.Name.EndsWith("Async") switch
         {
@@ -226,17 +309,52 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
             methodInfo.Name,
             methodInfo.Accessibility,
             generics,
+            extensionParameter,
             parameters,
             renderedReturnType,
             needsExtraAwait
         );
     }
 
+    private static (ParameterRenderModel ExtensionParameter, ImmutableArray<ParameterRenderModel> Parameters) CreateParameterModels(MethodInfo methodInfo)
+    {
+        if (methodInfo.Type is MethodType.Extension)
+        {
+            var parameters = methodInfo.Parameters
+                .Skip(1)
+                .Select(CreateParameterModel);
+
+            return (
+                CreateParameterModel(methodInfo.Parameters[0]), 
+                [.. parameters]
+            );
+        }
+
+        var extensionParameter = new ParameterRenderModel(
+            ToCamelCase(methodInfo.ContainingClass.Name),
+            methodInfo.ContainingClass.Type
+        );
+
+        return (extensionParameter, [.. methodInfo.Parameters.Select(CreateParameterModel)]);
+    }
+
+    private static ParameterRenderModel CreateParameterModel(ParameterInfo parameterInfo) =>
+        new(
+            parameterInfo.Name,
+            RenderType(parameterInfo.Type)
+        );
+
+    private static string ToCamelCase(string pascalCaseString) =>
+        char.ToLowerInvariant(pascalCaseString[0]) + pascalCaseString[1..];
+
+    private readonly record struct AttributeSettings(
+        string ExtensionClassName
+    );
+
     private readonly record struct ClassRenderModel(
-        string Name,
+        string ExtensionClassName,
         string Namespace,
         Accessibility Accessibility,
-        EquatableArray<GenericInfo> Generics,
         EquatableArray<MethodRenderModel> Methods
     );
 
@@ -245,6 +363,7 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
         string OriginalName,
         Accessibility Accessibility,
         EquatableArray<GenericInfo> Generics,
+        ParameterRenderModel ExtensionParameter,
         EquatableArray<ParameterRenderModel> Parameters,
         string ReturnType,
         bool NeedsExtraAwait
@@ -261,11 +380,14 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
         EquatableArray<ParameterInfo> Parameters,
         TypeInfo ReturnType,
         EquatableArray<GenericInfo> Generics,
-        Accessibility Accessibility
+        MethodType Type,
+        Accessibility Accessibility,
+        AttributeSettings AttributeSettings
     );
 
     private readonly record struct ClassInfo(
         string Name,
+        string Type,
         string Namespace,
         EquatableArray<GenericInfo> Generics,
         Accessibility Accessibility
@@ -290,5 +412,19 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
     {
         Public,
         Internal
+    }
+
+    private enum MethodType
+    {
+        Instance,
+        Extension
+    }
+
+    private static class ScribanHelpers
+    {
+        public static string ToCamelCase(string text) => AsyncExtensionMethodGenerator.ToCamelCase(text);
+
+        public static string RenderGenerics(IEnumerable<GenericInfo> generics) =>
+            $"<{string.Join(", ", generics.Select(generic => generic.Name))}>";
     }
 }

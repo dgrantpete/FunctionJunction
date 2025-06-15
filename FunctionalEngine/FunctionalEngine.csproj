@@ -7,7 +7,7 @@
 		<Nullable>enable</Nullable>
 		<FunctionalEngine_Defaults_GeneratePrivateConstructor>true</FunctionalEngine_Defaults_GeneratePrivateConstructor>
 		<FunctionalEngine_Defaults_MatchOn>Properties</FunctionalEngine_Defaults_MatchOn>
-		<FunctionalEngine_Defaults_GeneratePolymorphicSerialization>true</FunctionalEngine_Defaults_GeneratePolymorphicSerialization>
+		<FunctionalEngine_Defaults_GeneratePolymorphicSerialization>false</FunctionalEngine_Defaults_GeneratePolymorphicSerialization>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -15,6 +15,7 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
+		<PackageReference Include="System.Diagnostics.Tools" Version="4.3.0" />
 		<PackageReference Include="System.Text.Json" Version="9.0.5" />
 		<CompilerVisibleProperty Include="FunctionalEngine_Defaults_GeneratePolymorphicSerialization" />
 		<CompilerVisibleProperty Include="FunctionalEngine_Defaults_MatchOn" />
