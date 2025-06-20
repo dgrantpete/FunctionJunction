@@ -194,6 +194,12 @@ public abstract partial record Result<TOk, TError>
     public Task<TOk> UnwrapOrThrow<TException>(Func<TError, Task<TException>> exceptionProviderAsync) where TException : Exception =>
         UnwrapOr(async error => throw await exceptionProviderAsync(error));
 
+    public Result<TResult, TError> Cast<TResult>() where TResult : notnull, TOk =>
+        Map(ok => (TResult)ok!);
+
+    public Result<TOk, TResult> CastError<TResult>() where TResult : notnull, TError =>
+        MapError(error => (TResult)error!);
+
     public IEnumerable<TOk> ToEnumerable()
     {
         if (this is Ok(var ok))
@@ -344,6 +350,6 @@ public static class Result
             .TakeWhileInclusive(result => result.IsError)
             .Last();
 
-    public static Result<TOk, IImmutableList<TError>> Any<TOk, TError>(IEnumerable<Func<Result<TOk, TError>>> resultProviders) =>
+    public static Result<TOk, IImmutableList<TError>> Any<TOk, TError>(params IEnumerable<Func<Result<TOk, TError>>> resultProviders) =>
         Any(resultProviders.Select(resultProvider => resultProvider()));
 }

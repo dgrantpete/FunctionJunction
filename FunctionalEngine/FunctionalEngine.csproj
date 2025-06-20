@@ -15,6 +15,7 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
+		<PackageReference Include="System.Collections.Immutable" Version="9.0.6" />
 		<PackageReference Include="System.Diagnostics.Tools" Version="4.3.0" />
 		<PackageReference Include="System.Linq.AsyncEnumerable" Version="10.0.0-preview.5.25277.114" />
 		<PackageReference Include="System.Text.Json" Version="9.0.6" />
@@ -24,7 +25,7 @@
 	</ItemGroup>
 	
 	<ItemGroup>
-		<ProjectReference Include="..\FunctionalEngine.Generator\FunctionalEngine.Generator.csproj" OutputItemType="Analyzer" />
+		<ProjectReference Include="..\FunctionalEngine.Generator\FunctionalEngine.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 	</ItemGroup>
 
 </Project>

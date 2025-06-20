@@ -160,6 +160,16 @@ public readonly record struct Option<T> where T : notnull
             new InvalidOperationException($"Could not unwrap 'Option<{typeof(T).Name}>' because it doesn't contain a maybeValue")
         );
 
+    public Option<TResult> OfType<TResult>() where TResult : notnull =>
+        FlatMap(value => value switch
+        {
+            TResult castValue => new Option<TResult>(castValue),
+            _ => default
+        });
+
+    public Option<TResult> Cast<TResult>() where TResult : notnull, T =>
+        Map(value => (TResult)value);
+
     public IEnumerable<T> ToEnumerable()
     {
         if (IsSome)
