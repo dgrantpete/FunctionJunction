@@ -278,6 +278,6 @@ public static class Option
     public static Option<T> Any<T>(IEnumerable<Option<T>> options) where T : notnull =>
         options.FirstOrDefault(option => option.IsSome);
 
-    public static Option<T> Any<T>(this IEnumerable<Func<Option<T>>> optionProviders) where T : notnull =>
+    public static Option<T> Any<T>(params IEnumerable<Func<Option<T>>> optionProviders) where T : notnull =>
         Any(optionProviders.Select(optionProvider => optionProvider()));
 }
