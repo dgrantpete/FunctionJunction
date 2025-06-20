@@ -3,7 +3,7 @@
 namespace FunctionalEngine.Generator;
 
 [AttributeUsage(AttributeTargets.Method | AttributeTargets.Class | AttributeTargets.Struct)]
-public class GenerateAsyncExtensionAttribute : Attribute
+internal class GenerateAsyncExtensionAttribute : Attribute
 {
     public string? ExtensionClassName { get; set; }
 
