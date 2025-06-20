@@ -2,6 +2,9 @@
     {{~ ret generic.constraint ~}}
 {{~ end -}}
 using System.Threading.Tasks;
+{{~ for using in usings ~}}
+{{ using }}
+{{~ end ~}}
 
 #nullable enable
 #pragma warning disable CS8603

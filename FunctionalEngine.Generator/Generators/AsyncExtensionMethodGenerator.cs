@@ -1,5 +1,6 @@
 ﻿using FunctionalEngine.Generator.Internal;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Scriban;
 using Scriban.Runtime;
@@ -62,7 +63,15 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
                         methodInfo.ContainingClass.Accessibility
                     ),
                     (classInfo, methodInfos) => 
-                        CreateClassModel(classInfo.ExtensionClassName, classInfo.Namespace, classInfo.Accessibility, methodInfos)
+                        CreateClassModel(
+                            classInfo.ExtensionClassName, 
+                            classInfo.Namespace, 
+                            methodInfos.SelectMany(methodInfo => methodInfo.ContainingClass.Usings)
+                                .Distinct()
+                                .ToImmutableArray(), 
+                            classInfo.Accessibility, 
+                            methodInfos
+                        )
                 )
             );
 
@@ -91,9 +100,14 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
 
     private static MethodInfo? GetMethodInfo(GeneratorAttributeSyntaxContext context, CancellationToken cancellationToken)
     {
+        var compilationUnit = context.TargetNode.SyntaxTree.GetCompilationUnitRoot(cancellationToken);
+        var usings = compilationUnit.Usings
+            .Select(@using => @using.ToString())
+            .ToImmutableArray();
+
         if (context.TargetSymbol is not IMethodSymbol methodSymbol
             || GetMethodType(methodSymbol) is not { } methodType
-            || GetClassInfo(methodSymbol.ContainingType) is not { } classInfo
+            || GetClassInfo(methodSymbol.ContainingType, usings) is not { } classInfo
             || GetAccessibility(methodSymbol.DeclaredAccessibility) is not { } accessibility
         )
         {
@@ -167,13 +181,13 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
         _ => null
     };
 
-    private static ClassInfo? GetClassInfo(INamedTypeSymbol typeSymbol)
+    private static ClassInfo? GetClassInfo(INamedTypeSymbol typeSymbol, ImmutableArray<string> usings)
     {
         if (GetAccessibility(typeSymbol.DeclaredAccessibility) is not { } accessibility)
         {
             return null;
         }
-
+        
         return new(
             typeSymbol.Name,
             typeSymbol.ToDisplayString(format: new(
@@ -181,6 +195,7 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
                 genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters
             )),
             typeSymbol.ContainingNamespace.ToDisplayString(),
+            usings,
             typeSymbol.TypeParameters
                 .Select(GetGenericInfo)
                 .ToImmutableArray(),
@@ -309,12 +324,14 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
     private static ClassRenderModel CreateClassModel(
         string extensionClassName, 
         string @namespace, 
-        Accessibility accessibility, 
+        EquatableArray<string> usings,
+        Accessibility accessibility,
         IEnumerable<MethodInfo> methodInfos
     ) =>
         new(
             extensionClassName,
             @namespace,
+            usings,
             accessibility,
             methodInfos.Select(CreateMethodModel)
                 .ToImmutableArray()
@@ -434,6 +451,7 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
     private readonly record struct ClassRenderModel(
         string ExtensionClassName,
         string Namespace,
+        EquatableArray<string> Usings,
         Accessibility Accessibility,
         EquatableArray<MethodRenderModel> Methods
     );
@@ -469,6 +487,7 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
         string Name,
         string Type,
         string Namespace,
+        EquatableArray<string> Usings,
         EquatableArray<GenericInfo> Generics,
         Accessibility Accessibility
     );

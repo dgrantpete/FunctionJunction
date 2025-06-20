@@ -252,17 +252,22 @@ public static class Option
     public static Option<T> Flatten<T>(this Option<Option<T>> option) where T : notnull =>
         option.FlatMap(Identity);
 
-    public static Option<IImmutableList<T>> All<T>(params IEnumerable<Func<Option<T>>> optionProviders) where T : notnull =>
-        optionProviders
+    public static Option<IImmutableList<T>> All<T>(IEnumerable<Option<T>> options) where T : notnull =>
+        options
             .Scan(
                 Some<IImmutableList<T>>([]),
-                (previousOptions, optionProvider) => previousOptions.And(optionProvider)
+                (previousOptions, option) => previousOptions.And(() => option)
                     .MapTuple((previousValues, value) => previousValues.Add(value))
             )
             .TakeWhileInclusive(option => option.IsSome)
             .Last();
 
-    public static Option<T> Any<T>(params IEnumerable<Func<Option<T>>> optionProviders) where T : notnull =>
-        optionProviders.Select(optionProvider => optionProvider())
-            .FirstOrDefault(option => option.IsSome);
+    public static Option<IImmutableList<T>> All<T>(params IEnumerable<Func<Option<T>>> optionProviders) where T : notnull =>
+        All(optionProviders.Select(optionProvider => optionProvider()));
+
+    public static Option<T> Any<T>(IEnumerable<Option<T>> options) where T : notnull =>
+        options.FirstOrDefault(option => option.IsSome);
+
+    public static Option<T> Any<T>(this IEnumerable<Func<Option<T>>> optionProviders) where T : notnull =>
+        Any(optionProviders.Select(optionProvider => optionProvider()));
 }

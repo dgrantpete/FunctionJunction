@@ -8,6 +8,7 @@ using static FunctionalEngine.Prelude;
 namespace FunctionalEngine;
 
 [DiscriminatedUnion]
+[GenerateAsyncExtension(ExtensionClassName = "ResultAsyncExtensions", Namespace = "FunctionalEngine.Async")]
 public abstract partial record Result<TOk, TError>
 {
     public bool IsOk => this is Ok;
@@ -216,6 +217,7 @@ public abstract partial record Result<TOk, TError>
         new Result<TOk, TResult>.Error(value);
 }
 
+[GenerateAsyncExtension(ExtensionClassName = "ResultAsyncExtensions", Namespace = "FunctionalEngine.Async")]
 public static class Result
 {
     public static class ApplyType<TPartial>
@@ -317,25 +319,31 @@ public static class Result
         return isError;
     }
 
-    public static Result<IImmutableList<TOk>, TError> All<TOk, TError>(params IEnumerable<Func<Result<TOk, TError>>> resultProviders) =>
-        resultProviders
+    public static Result<IImmutableList<TOk>, TError> All<TOk, TError>(IEnumerable<Result<TOk, TError>> results) =>
+        results
             .Scan(
                 Ok<IImmutableList<TOk>, TError>([]),
-                (previousResults, resultProvider) =>
-                    previousResults.And(resultProvider)
+                (previousResults, result) =>
+                    previousResults.And(() => result)
                         .MapTuple((previousOks, ok) => previousOks.Add(ok))
             )
             .TakeWhileInclusive(result => result.IsOk)
             .Last();
 
-    public static Result<TOk, IImmutableList<TError>> Any<TOk, TError>(params IEnumerable<Func<Result<TOk, TError>>> resultProviders) =>
-        resultProviders
+    public static Result<IImmutableList<TOk>, TError> All<TOk, TError>(params IEnumerable<Func<Result<TOk, TError>>> resultProviders) =>
+        All(resultProviders.Select(resultProvider => resultProvider()));
+
+    public static Result<TOk, IImmutableList<TError>> Any<TOk, TError>(IEnumerable<Result<TOk, TError>> results) =>
+        results
             .Scan(
                 Error<TOk, IImmutableList<TError>>([]),
-                (previousResults, resultProvider) =>
-                    previousResults.Or(resultProvider)
+                (previousResults, result) =>
+                    previousResults.Or(() => result)
                         .MapErrorTuple((previousErrors, error) => previousErrors.Add(error))
             )
             .TakeWhileInclusive(result => result.IsError)
             .Last();
+
+    public static Result<TOk, IImmutableList<TError>> Any<TOk, TError>(IEnumerable<Func<Result<TOk, TError>>> resultProviders) =>
+        Any(resultProviders.Select(resultProvider => resultProvider()));
 }
