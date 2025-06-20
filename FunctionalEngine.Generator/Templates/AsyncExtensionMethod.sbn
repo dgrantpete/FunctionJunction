@@ -4,6 +4,7 @@
 using System.Threading.Tasks;
 
 #nullable enable
+#pragma warning disable CS8603
 
 namespace {{ namespace }}
 {

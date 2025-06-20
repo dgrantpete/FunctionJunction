@@ -42,12 +42,9 @@
 	</Target>
 
 	<ItemGroup>
-		<None Include="DiscriminatedUnionAttribute.cs" Pack="true" PackagePath="contentFiles/cs/any/" BuildAction="Compile" />
-		<None Include="GenerateAsyncExtensionAttribute.cs" Pack="true" PackagePath="contentFiles/cs/any/" BuildAction="Compile" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<EmbeddedResource Include="Templates\*.sbn" />
+		<Compile Include="..\FunctionalEngine\Generator\*.cs"
+			Link="%(Filename)%(Extension)" />
 	</ItemGroup>
 
 </Project>

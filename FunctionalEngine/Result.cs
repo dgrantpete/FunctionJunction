@@ -1,7 +1,9 @@
-﻿using FunctionalEngine.Generator;
+﻿using FunctionalEngine.Async;
+using FunctionalEngine.Extensions;
+using FunctionalEngine.Generator;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
-using static FunctionalEngine.Functions;
+using static FunctionalEngine.Prelude;
 
 namespace FunctionalEngine;
 
@@ -56,7 +58,7 @@ public abstract partial record Result<TOk, TError>
         );
 
     [GenerateAsyncExtension]
-    public Task<Result<TResult, TError>> FlatMapAsync<TResult>(Func<TOk, Task<Result<TResult, TError>>> mapperAsync) =>
+    public Task<Result<TResult, TError>> FlatMap<TResult>(Func<TOk, Task<Result<TResult, TError>>> mapperAsync) =>
         Match(
             mapperAsync,
             error => Task.FromResult<Result<TResult, TError>>(new Result<TResult, TError>.Error(error))
@@ -69,8 +71,8 @@ public abstract partial record Result<TOk, TError>
         );
 
     [GenerateAsyncExtension]
-    public Task<Result<TResult, TError>> MapAsync<TResult>(Func<TOk, Task<TResult>> mapperAsync) =>
-        FlatMapAsync(async ok => NewOk(await mapperAsync(ok)));
+    public Task<Result<TResult, TError>> Map<TResult>(Func<TOk, Task<TResult>> mapperAsync) =>
+        FlatMap(async ok => NewOk(await mapperAsync(ok)));
 
     [GenerateAsyncExtension]
     public Result<TOk, TResult> Recover<TResult>(Func<TError, Result<TOk, TResult>> recoverer) =>
@@ -80,7 +82,7 @@ public abstract partial record Result<TOk, TError>
         );
 
     [GenerateAsyncExtension]
-    public Task<Result<TOk, TResult>> RecoverAsync<TResult>(Func<TError, Task<Result<TOk, TResult>>> recovererAsync) =>
+    public Task<Result<TOk, TResult>> Recover<TResult>(Func<TError, Task<Result<TOk, TResult>>> recovererAsync) =>
         Match(
             ok => Task.FromResult<Result<TOk, TResult>>(new Result<TOk, TResult>.Ok(ok)),
             recovererAsync
@@ -93,8 +95,8 @@ public abstract partial record Result<TOk, TError>
         );
 
     [GenerateAsyncExtension]
-    public Task<Result<TOk, TResult>> MapErrorAsync<TResult>(Func<TError, Task<TResult>> mapperAsync) =>
-        RecoverAsync(async error =>
+    public Task<Result<TOk, TResult>> MapError<TResult>(Func<TError, Task<TResult>> mapperAsync) =>
+        Recover(async error =>
             NewError(await mapperAsync(error))
         );
 
@@ -107,8 +109,8 @@ public abstract partial record Result<TOk, TError>
         });
 
     [GenerateAsyncExtension]
-    public Task<Result<TOk, TError>> ValidateAsync(Func<TOk, Task<bool>> validatorAsync, Func<TOk, Task<TError>> errorMapperAsync) =>
-        FlatMapAsync(async ok => await validatorAsync(ok) switch
+    public Task<Result<TOk, TError>> Validate(Func<TOk, Task<bool>> validatorAsync, Func<TOk, Task<TError>> errorMapperAsync) =>
+        FlatMap(async ok => await validatorAsync(ok) switch
         {
             true => this,
             false => NewError(await errorMapperAsync(ok))
@@ -119,16 +121,16 @@ public abstract partial record Result<TOk, TError>
         FlatMap(ok => otherProvider().Map(otherOk => (ok, otherOk)));
 
     [GenerateAsyncExtension]
-    public Task<Result<(TOk Left, TOther Right), TError>> AndAsync<TOther>(Func<Task<Result<TOther, TError>>> otherProviderAsync) =>
-        FlatMapAsync(async ok => (await otherProviderAsync()).Map(otherOk => (ok, otherOk)));
+    public Task<Result<(TOk Left, TOther Right), TError>> And<TOther>(Func<Task<Result<TOther, TError>>> otherProviderAsync) =>
+        FlatMap(async ok => (await otherProviderAsync()).Map(otherOk => (ok, otherOk)));
 
     [GenerateAsyncExtension]
     public Result<TOk, (TError Left, TOther Right)> Or<TOther>(Func<Result<TOk, TOther>> otherProvider) =>
         Recover(error => otherProvider().MapError(otherError => (error, otherError)));
 
     [GenerateAsyncExtension]
-    public Task<Result<TOk, (TError Left, TOther Right)>> OrAsync<TOther>(Func<Task<Result<TOk, TOther>>> otherProviderAsync) =>
-        RecoverAsync(async error => (await otherProviderAsync()).MapError(otherError => (error, otherError)));
+    public Task<Result<TOk, (TError Left, TOther Right)>> Or<TOther>(Func<Task<Result<TOk, TOther>>> otherProviderAsync) =>
+        Recover(async error => (await otherProviderAsync()).MapError(otherError => (error, otherError)));
 
     [GenerateAsyncExtension]
     public Result<TError, TOk> Swap() =>
@@ -146,8 +148,8 @@ public abstract partial record Result<TOk, TError>
         });
 
     [GenerateAsyncExtension]
-    public Task<Result<TOk, TError>> TapAsync(Func<TOk, Task> tapperAsync) =>
-        MapAsync(async ok =>
+    public Task<Result<TOk, TError>> Tap(Func<TOk, Task> tapperAsync) =>
+        Map(async ok =>
         {
             await tapperAsync(ok);
             return ok;
@@ -162,8 +164,8 @@ public abstract partial record Result<TOk, TError>
         });
 
     [GenerateAsyncExtension]
-    public Task<Result<TOk, TError>> TapErrorAsync(Func<TError, Task> tapperAsync) =>
-        MapErrorAsync(async error =>
+    public Task<Result<TOk, TError>> TapError(Func<TError, Task> tapperAsync) =>
+        MapError(async error =>
         {
             await tapperAsync(error);
             return error;
@@ -177,7 +179,7 @@ public abstract partial record Result<TOk, TError>
         );
 
     [GenerateAsyncExtension]
-    public Task<TOk> UnwrapOrAsync(Func<TError, Task<TOk>> defaultProviderAsync) =>
+    public Task<TOk> UnwrapOr(Func<TError, Task<TOk>> defaultProviderAsync) =>
         Match(
             Task.FromResult,
             defaultProviderAsync
@@ -185,11 +187,11 @@ public abstract partial record Result<TOk, TError>
 
     [GenerateAsyncExtension]
     public TOk UnwrapOrThrow<TException>(Func<TError, TException> exceptionProvider) where TException : Exception =>
-        UnwrapOr(error => throw exceptionProvider(error));
+        UnwrapOr(TOk (error) => throw exceptionProvider(error));
 
     [GenerateAsyncExtension]
-    public Task<TOk> UnwrapOrThrowAsync<TException>(Func<TError, Task<TException>> exceptionProviderAsync) where TException : Exception =>
-        UnwrapOrAsync(async error => throw await exceptionProviderAsync(error));
+    public Task<TOk> UnwrapOrThrow<TException>(Func<TError, Task<TException>> exceptionProviderAsync) where TException : Exception =>
+        UnwrapOr(async error => throw await exceptionProviderAsync(error));
 
     public IEnumerable<TOk> ToEnumerable()
     {
@@ -227,11 +229,7 @@ public static class Result
 
     public static Result<TOk, TError> Ok<TOk, TError>(TOk ok) => new Result<TOk, TError>.Ok(ok);
 
-    public static async Task<Result<TOk, TError>> OkAsync<TOk, TError>(Task<TOk> okTask) => new Result<TOk, TError>.Ok(await okTask);
-
     public static Result<TOk, TError> Error<TOk, TError>(TError error) => new Result<TOk, TError>.Error(error);
-
-    public static async Task<Result<TOk, TError>> ErrorAsync<TOk, TError>(Task<TError> errorTask) => new Result<TOk, TError>.Error(await errorTask);
 
     [GenerateAsyncExtension]
     public static Option<TOk> ToOption<TOk, TError>(this Result<TOk, TError> result) where TOk : notnull =>
@@ -265,16 +263,16 @@ public static class Result
 
     [GenerateAsyncExtension]
     public static TOk? UnwrapNullable<TOk, TError>(this Result<TOk, TError> result) where TOk : class =>
-        result.Match<TOk?>(
+        result.Match(
             value => value,
-            _ => null
+            TOk? (_) => null
         );
 
     [GenerateAsyncExtension]
     public static TOk? UnwrapNullableValue<TOk, TError>(this Result<TOk, TError> result) where TOk : struct =>
-        result.Match<TOk?>(
+        result.Match(
             value => value,
-            _ => null
+            TOk? (_) => null
         );
 
     [GenerateAsyncExtension]
@@ -321,19 +319,23 @@ public static class Result
 
     public static Result<IImmutableList<TOk>, TError> All<TOk, TError>(params IEnumerable<Func<Result<TOk, TError>>> resultProviders) =>
         resultProviders
-            .Aggregate(
+            .Scan(
                 Ok<IImmutableList<TOk>, TError>([]),
-                (previous, current) =>
-                    previous.And(current)
-                        .MapTuple((errors, newError) => errors.Add(newError))
-            );
+                (previousResults, resultProvider) =>
+                    previousResults.And(resultProvider)
+                        .MapTuple((previousOks, ok) => previousOks.Add(ok))
+            )
+            .TakeWhileInclusive(result => result.IsOk)
+            .Last();
 
     public static Result<TOk, IImmutableList<TError>> Any<TOk, TError>(params IEnumerable<Func<Result<TOk, TError>>> resultProviders) =>
         resultProviders
-            .Aggregate(
+            .Scan(
                 Error<TOk, IImmutableList<TError>>([]),
-                (previous, current) =>
-                    previous.Or(current)
-                        .MapErrorTuple((errors, newError) => errors.Add(newError))
-            );
+                (previousResults, resultProvider) =>
+                    previousResults.Or(resultProvider)
+                        .MapErrorTuple((previousErrors, error) => previousErrors.Add(error))
+            )
+            .TakeWhileInclusive(result => result.IsError)
+            .Last();
 }

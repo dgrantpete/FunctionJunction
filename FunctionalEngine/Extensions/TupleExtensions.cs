@@ -1,6 +1,6 @@
-﻿namespace FunctionalEngine;
+﻿namespace FunctionalEngine.Extensions;
 
-public static class TransformationHelpers
+public static class TupleExtensions
 {
     public static (T1, T2, T3) Coalesce<T1, T2, T3>(this ((T1, T2), T3) tuple) =>
         (tuple.Item1.Item1, tuple.Item1.Item2, tuple.Item2);

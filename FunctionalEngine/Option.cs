@@ -1,9 +1,12 @@
-﻿using FunctionalEngine.Generator;
+﻿using FunctionalEngine.Extensions;
+using FunctionalEngine.Generator;
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
-using static FunctionalEngine.Functions;
+using static FunctionalEngine.Prelude;
 
 namespace FunctionalEngine;
 
+[GenerateAsyncExtension(ExtensionClassName = "OptionAsyncExtensions", Namespace = "FunctionalEngine.Async")]
 public readonly record struct Option<T> where T : notnull
 {
     private readonly T internalValue;
@@ -42,7 +45,7 @@ public readonly record struct Option<T> where T : notnull
         );
 
     [GenerateAsyncExtension]
-    public Task<Option<TResult>> FlatMapAsync<TResult>(Func<T, Task<Option<TResult>>> mapperAsync) where TResult : notnull =>
+    public Task<Option<TResult>> FlatMap<TResult>(Func<T, Task<Option<TResult>>> mapperAsync) where TResult : notnull =>
         Match(
             mapperAsync,
             () => Task.FromResult(default(Option<TResult>))
@@ -53,8 +56,8 @@ public readonly record struct Option<T> where T : notnull
         FlatMap(value => new Option<TResult>(mapper(value)));
 
     [GenerateAsyncExtension]
-    public Task<Option<TResult>> MapAsync<TResult>(Func<T, Task<TResult>> mapperAsync) where TResult : notnull =>
-        FlatMapAsync(async value => new Option<TResult>(await mapperAsync(value)));
+    public Task<Option<TResult>> Map<TResult>(Func<T, Task<TResult>> mapperAsync) where TResult : notnull =>
+        FlatMap(async value => new Option<TResult>(await mapperAsync(value)));
 
     [GenerateAsyncExtension]
     public Option<T> Filter(Func<T, bool> filter) =>
@@ -65,8 +68,8 @@ public readonly record struct Option<T> where T : notnull
         });
 
     [GenerateAsyncExtension]
-    public Task<Option<T>> FilterAsync(Func<T, Task<bool>> filterAsync) =>
-        FlatMapAsync(async value => await filterAsync(value) switch
+    public Task<Option<T>> Filter(Func<T, Task<bool>> filterAsync) =>
+        FlatMap(async value => await filterAsync(value) switch
         {
             true => new Option<T>(value),
             false => default
@@ -80,7 +83,7 @@ public readonly record struct Option<T> where T : notnull
         );
 
     [GenerateAsyncExtension]
-    public Task<Option<T>> OrAsync(Func<Task<Option<T>>> otherProviderAsync) =>
+    public Task<Option<T>> Or(Func<Task<Option<T>>> otherProviderAsync) =>
         Match(
             value => Task.FromResult(new Option<T>(value)),
             otherProviderAsync
@@ -91,8 +94,8 @@ public readonly record struct Option<T> where T : notnull
         FlatMap(value => otherProvider().Map(otherValue => (value, otherValue)));
 
     [GenerateAsyncExtension]
-    public Task<Option<(T Left, TOther Right)>> AndAsync<TOther>(Func<Task<Option<TOther>>> otherProviderAsync) where TOther : notnull =>
-        FlatMapAsync(async value => 
+    public Task<Option<(T Left, TOther Right)>> And<TOther>(Func<Task<Option<TOther>>> otherProviderAsync) where TOther : notnull =>
+        FlatMap(async value => 
             (await otherProviderAsync())
                 .Map(otherValue => (value, otherValue))
         );
@@ -106,8 +109,8 @@ public readonly record struct Option<T> where T : notnull
         });
 
     [GenerateAsyncExtension]
-    public Task<Option<T>> TapAsync(Func<T, Task> tapperAsync) =>
-        MapAsync(async value =>
+    public Task<Option<T>> Tap(Func<T, Task> tapperAsync) =>
+        Map(async value =>
         {
             await tapperAsync(value);
             return value;
@@ -118,12 +121,12 @@ public readonly record struct Option<T> where T : notnull
         Or(() =>
         {
             tapper();
-            return default;
+            return Option.None<T>();
         });
 
     [GenerateAsyncExtension]
-    public Task<Option<T>> TapNoneAsync(Func<Task> tapperAsync) =>
-        OrAsync(async () =>
+    public Task<Option<T>> TapNone(Func<Task> tapperAsync) =>
+        Or(async () =>
         {
             await tapperAsync();
             return default;
@@ -137,7 +140,7 @@ public readonly record struct Option<T> where T : notnull
         );
 
     [GenerateAsyncExtension]
-    public Task<T> UnwrapOrAsync(Func<Task<T>> defaultProviderAsync) =>
+    public Task<T> UnwrapOr(Func<Task<T>> defaultProviderAsync) =>
         Match(
             Task.FromResult,
             defaultProviderAsync
@@ -145,11 +148,11 @@ public readonly record struct Option<T> where T : notnull
 
     [GenerateAsyncExtension]
     public T UnwrapOrThrow<TException>(Func<TException> exceptionProvider) where TException : Exception =>
-        UnwrapOr(() => throw exceptionProvider());
+        UnwrapOr(T () => throw exceptionProvider());
 
     [GenerateAsyncExtension]
-    public Task<T> UnwrapOrThrowAsync<TException>(Func<Task<TException>> exceptionProvider) where TException : Exception =>
-        UnwrapOrAsync(async () => throw await exceptionProvider());
+    public Task<T> UnwrapOrThrow<TException>(Func<Task<TException>> exceptionProvider) where TException : Exception =>
+        UnwrapOr(async () => throw await exceptionProvider());
 
     [GenerateAsyncExtension]
     public T UnwrapOrThrow() => 
@@ -166,15 +169,14 @@ public readonly record struct Option<T> where T : notnull
     }
 }
 
+[GenerateAsyncExtension(ExtensionClassName = "OptionAsyncExtensions", Namespace = "FunctionalEngine.Async")]
 public static class Option
 {
     public static Option<T> None<T>() where T : notnull => default;
 
     public static Option<T> Some<T>(T value) where T : notnull => new(value);
 
-    public static async Task<Option<T>> SomeAsync<T>(Task<T> valueTask) where T : notnull => 
-        Some(await valueTask);
-
+    [GenerateAsyncExtension]
     public static Result<T, TError> ToResult<T, TError>(this Option<T> option, Func<TError> errorProvider)
         where T : notnull
     =>
@@ -183,6 +185,7 @@ public static class Option
             Compose(errorProvider, Result.ApplyType<T>.Error)
         );
 
+    [GenerateAsyncExtension]
     public static Result<TOk, T> ToErrorResult<TOk, T>(this Option<T> option, Func<TOk> okProvider)
         where T : notnull
     =>
@@ -193,8 +196,8 @@ public static class Option
 
     [GenerateAsyncExtension]
     public static T? UnwrapNullable<T>(this Option<T> option) where T : class =>
-        option.Match<T?>(
-            value => value,
+        option.Match(
+            T? (value) => value,
             () => null
         );
 
@@ -227,19 +230,39 @@ public static class Option
         null => default
     };
 
-    public static async Task<Option<T>> FromNullableAsync<T>(Task<T?> valueTask) where T : class => await valueTask switch
+    public static async Task<Option<T>> AwaitFromNullable<T>(Task<T?> valueTask) where T : class => await valueTask switch
     {
-        { } value => new(value),
+        { } someValue => new(someValue),
         null => default
     };
 
-    public static async Task<Option<T>> FromNullableAsync<T>(Task<T?> valueTask) where T : struct => await valueTask switch
+    public static Option<T> FromNullable<T>(T? value) where T : struct => value switch
     {
-        { } value => new(value),
+        { } someValue => new(someValue),
+        null => default
+    };
+
+    public static async Task<Option<T>> AwaitFromNullable<T>(Task<T?> valueTask) where T : struct => await valueTask switch
+    {
+        { } someValue => new(someValue),
         null => default
     };
 
     [GenerateAsyncExtension]
     public static Option<T> Flatten<T>(this Option<Option<T>> option) where T : notnull =>
         option.FlatMap(Identity);
+
+    public static Option<IImmutableList<T>> All<T>(params IEnumerable<Func<Option<T>>> optionProviders) where T : notnull =>
+        optionProviders
+            .Scan(
+                Some<IImmutableList<T>>([]),
+                (previousOptions, optionProvider) => previousOptions.And(optionProvider)
+                    .MapTuple((previousValues, value) => previousValues.Add(value))
+            )
+            .TakeWhileInclusive(option => option.IsSome)
+            .Last();
+
+    public static Option<T> Any<T>(params IEnumerable<Func<Option<T>>> optionProviders) where T : notnull =>
+        optionProviders.Select(optionProvider => optionProvider())
+            .FirstOrDefault(option => option.IsSome);
 }

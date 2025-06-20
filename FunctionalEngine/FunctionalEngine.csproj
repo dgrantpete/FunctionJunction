@@ -11,12 +11,17 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <Compile Remove="Generator\DiscriminatedUnionAttribute.cs" />
+	  <Compile Remove="Generator\GenerateAsyncExtensionAttribute.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Include="PolySharp" Version="1.15.0">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<PackageReference Include="System.Diagnostics.Tools" Version="4.3.0" />
-		<PackageReference Include="System.Text.Json" Version="9.0.5" />
+		<PackageReference Include="System.Text.Json" Version="9.0.6" />
 		<CompilerVisibleProperty Include="FunctionalEngine_Defaults_GeneratePolymorphicSerialization" />
 		<CompilerVisibleProperty Include="FunctionalEngine_Defaults_MatchOn" />
 		<CompilerVisibleProperty Include="FunctionalEngine_Defaults_GeneratePrivateConstructor" />
@@ -24,6 +29,19 @@
 	
 	<ItemGroup>
 		<ProjectReference Include="..\FunctionalEngine.Generator\FunctionalEngine.Generator.csproj" OutputItemType="Analyzer" />
+	</ItemGroup>
+	
+	<ItemGroup>
+	  <None Include="Generator\DiscriminatedUnionAttribute.cs">
+	    <PackagePath>contentFiles/cs/any/</PackagePath>
+	    <BuildAction>Compile</BuildAction>
+	    <Pack>true</Pack>
+	  </None>
+	  <None Include="Generator\GenerateAsyncExtensionAttribute.cs">
+	    <PackagePath>contentFiles/cs/any/</PackagePath>
+	    <BuildAction>Compile</BuildAction>
+	    <Pack>true</Pack>
+	  </None>
 	</ItemGroup>
 
 </Project>

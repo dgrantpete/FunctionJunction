@@ -15,6 +15,8 @@ namespace FunctionalEngine.Generator.Generators;
 [Generator("C#")]
 internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
 {
+    private static readonly string[] templateSplitStrings = ["{0}"];
+
     private static readonly Lazy<Template> template = new(static () =>
     {
         var assembly = typeof(AsyncExtensionMethodGenerator).Assembly;
@@ -53,8 +55,11 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
                             methodInfo.AttributeSettings.ExtensionClassName, 
                             methodInfo.ContainingClass.Name
                         ),
-                        methodInfo.ContainingClass.Namespace,
-                        methodInfo.Accessibility
+                        Namespace: string.Format(
+                            methodInfo.AttributeSettings.Namespace,
+                            methodInfo.ContainingClass.Namespace
+                        ),
+                        methodInfo.ContainingClass.Accessibility
                     ),
                     (classInfo, methodInfos) => 
                         CreateClassModel(classInfo.ExtensionClassName, classInfo.Namespace, classInfo.Accessibility, methodInfos)
@@ -67,7 +72,7 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
             {
                 var generatedCode = GenerateCode(renderModel);
 
-                context.AddSource($"{renderModel.ExtensionClassName}.g.cs", generatedCode);
+                context.AddSource($"{renderModel.Namespace}.{renderModel.ExtensionClassName}.g.cs", generatedCode);
             }
         );
     }
@@ -95,7 +100,17 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
             return null;
         }
 
-        var attributeSettings = GetAttributeSettings(context.Attributes[0]);
+        var methodAttribute = context.Attributes[0];
+        var methodAttributeInfo = GetAttributeInfo(methodAttribute);
+
+        var classAttribute = methodSymbol.ContainingType.GetAttributes()
+            .SingleOrDefault(attribute => attribute.AttributeClass?.ToDisplayString() == GenerateAsyncExtensionDefaults.AttributeName);
+
+        var classAttributeInfo = classAttribute switch
+        {
+            null => default(AttributeInfo?),
+            { } attribute => GetAttributeInfo(attribute)
+        };
 
         var parameterInfos = methodSymbol.Parameters.Select(GetParameterInfo)
             .ToImmutableArray();
@@ -112,21 +127,37 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
             generics,
             methodType,
             accessibility,
-            attributeSettings
+            methodAttributeInfo.Or(classAttributeInfo)
+                .ToSettings()
         );
     }
 
-    private static AttributeSettings GetAttributeSettings(AttributeData attribute)
+    private static AttributeInfo GetAttributeInfo(AttributeData attribute)
     {
         var extensionClassName = (string?)attribute.NamedArguments
-            .Select(argument => ((string Name, TypedConstant Constant)?)(argument.Key, argument.Value))
+            .Select((string Name, TypedConstant Constant)? (argument) => (argument.Key, argument.Value))
             .SingleOrDefault(argument => argument?.Name is nameof(GenerateAsyncExtensionAttribute.ExtensionClassName))
             ?.Constant
             .Value;
 
-        return new(
-            extensionClassName ?? GenerateAsyncExtensionDefaults.ExtensionClassName
-        );
+        var extensionMethodName = (string?)attribute.NamedArguments
+            .Select((string Name, TypedConstant Constant)? (argument) => (argument.Key, argument.Value))
+            .SingleOrDefault(argument => argument?.Name is nameof(GenerateAsyncExtensionAttribute.ExtensionMethodName))
+            ?.Constant
+            .Value;
+
+        var @namespace = (string?)attribute.NamedArguments
+            .Select((string Name, TypedConstant Constant)? (argument) => (argument.Key, argument.Value))
+            .SingleOrDefault(argument => argument?.Name is nameof(GenerateAsyncExtensionAttribute.Namespace))
+            ?.Constant
+            .Value;
+
+        return new()
+        {
+            ExtensionClassName = extensionClassName,
+            ExtensionMethodName = extensionMethodName,
+            Namespace = @namespace
+        };
     }
 
     private static MethodType? GetMethodType(IMethodSymbol methodSymbol) => methodSymbol switch
@@ -145,8 +176,11 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
 
         return new(
             typeSymbol.Name,
-            typeSymbol.ToDisplayString(),
-            typeSymbol.ContainingNamespace.Name,
+            typeSymbol.ToDisplayString(format: new(
+                typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces,
+                genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters
+            )),
+            typeSymbol.ContainingNamespace.ToDisplayString(),
             typeSymbol.TypeParameters
                 .Select(GetGenericInfo)
                 .ToImmutableArray(),
@@ -235,7 +269,10 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
         {
             var typeArguments = genericSymbol.TypeArguments.Select(GetTypeInfo).ToImmutableArray();
 
-            var displayName = genericSymbol.ToDisplayString(format: new(genericsOptions: SymbolDisplayGenericsOptions.None));
+            var displayName = genericSymbol.ToDisplayString(format: new(
+                genericsOptions: SymbolDisplayGenericsOptions.None,
+                typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces
+            ));
 
             var name = $"{displayName}<{{0}}>";
 
@@ -243,7 +280,10 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
         }
 
         return new(
-            typeSymbol.ToDisplayString(),
+            typeSymbol.ToDisplayString(format: new(
+                typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces,
+                genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters
+            )),
             ImmutableArray.Create<TypeInfo>()
         );
     }
@@ -298,11 +338,7 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
 
         var (extensionParameter, parameters) = CreateParameterModels(methodInfo);
 
-        var name = methodInfo.Name.EndsWith("Async") switch
-        {
-            true => methodInfo.Name,
-            false => $"{methodInfo.Name}Async"
-        };
+        var name = CreateMethodName(methodInfo.Name, methodInfo.AttributeSettings.ExtensionMethodName);
 
         return new(
             name,
@@ -314,6 +350,24 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
             renderedReturnType,
             needsExtraAwait
         );
+    }
+
+    private static string CreateMethodName(string originalName, string nameTemplate)
+    {
+        var templateParts = nameTemplate.Split(templateSplitStrings, StringSplitOptions.None)
+            .AsSpan();
+
+        if (templateParts is [var firstPart, ..] && originalName.StartsWith(firstPart))
+        {
+            templateParts[0] = string.Empty;
+        }
+
+        if (templateParts is [.., var lastPart] && originalName.EndsWith(lastPart))
+        {
+            templateParts[^1] = string.Empty;
+        }
+
+        return string.Join(originalName, templateParts.ToArray());
     }
 
     private static (ParameterRenderModel ExtensionParameter, ImmutableArray<ParameterRenderModel> Parameters) CreateParameterModels(MethodInfo methodInfo)
@@ -348,8 +402,34 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
         char.ToLowerInvariant(pascalCaseString[0]) + pascalCaseString[1..];
 
     private readonly record struct AttributeSettings(
-        string ExtensionClassName
+        string ExtensionClassName,
+        string ExtensionMethodName,
+        string Namespace
     );
+
+    private readonly record struct AttributeInfo
+    {
+        public string? ExtensionClassName { get; init; }
+
+        public string? ExtensionMethodName { get; init; }
+
+        public string? Namespace { get; init; }
+
+        public readonly AttributeSettings ToSettings() =>
+            new(
+                ExtensionClassName ?? GenerateAsyncExtensionDefaults.ExtensionClassName,
+                ExtensionMethodName ?? GenerateAsyncExtensionDefaults.ExtensionMethodName,
+                Namespace ?? GenerateAsyncExtensionDefaults.Namespace
+            );
+
+        public readonly AttributeInfo Or(AttributeInfo? other) =>
+            new()
+            {
+                ExtensionClassName = ExtensionClassName ?? other?.ExtensionClassName,
+                ExtensionMethodName = ExtensionMethodName ?? other?.ExtensionMethodName,
+                Namespace = Namespace ?? other?.Namespace
+            };
+    }
 
     private readonly record struct ClassRenderModel(
         string ExtensionClassName,

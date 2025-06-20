@@ -14,7 +14,7 @@ public static class Try<TException> where TException : Exception
         }
     }
 
-    public static async Task<Result<TOk, TException>> ExecuteAsync<TOk>(Func<Task<TOk>> functionAsync)
+    public static async Task<Result<TOk, TException>> Execute<TOk>(Func<Task<TOk>> functionAsync)
     {
         try
         {
@@ -32,6 +32,6 @@ public static class Try
     public static Result<TOk, Exception> Execute<TOk>(Func<TOk> function) =>
         Try<Exception>.Execute(function);
 
-    public static Task<Result<TOk, Exception>> ExecuteAsync<TOk>(Func<Task<TOk>> functionAsync) =>
-        Try<Exception>.ExecuteAsync(functionAsync);
+    public static Task<Result<TOk, Exception>> Execute<TOk>(Func<Task<TOk>> functionAsync) =>
+        Try<Exception>.Execute(functionAsync);
 }

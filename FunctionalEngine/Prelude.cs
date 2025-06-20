@@ -1,6 +1,6 @@
 ﻿namespace FunctionalEngine;
 
-public static class Functions
+public static class Prelude
 {
     public static T Identity<T>(T value) => value;
 
