@@ -3,7 +3,7 @@
 internal static class GenerateAsyncExtensionDefaults
 {
     public const string TemplateName = "AsyncExtensionMethod.sbn";
-
+    
     public static string AttributeName { get; } = typeof(GenerateAsyncExtensionAttribute).FullName;
 
     public const string ExtensionClassName = "{0}ExtensionsAsync";

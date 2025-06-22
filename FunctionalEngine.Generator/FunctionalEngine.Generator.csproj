@@ -43,8 +43,7 @@
 
 	<ItemGroup>
 		<EmbeddedResource Include="Templates\*.sbn" />
-		<Compile Include="..\FunctionalEngine\Generator\*.cs"
-			Link="%(Filename)%(Extension)" />
+		<Compile Include="..\FunctionalEngine\Generator\*.cs" Link="%(Filename)%(Extension)" />
 	</ItemGroup>
 
 </Project>
