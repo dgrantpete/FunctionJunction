@@ -152,13 +152,11 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
         });
     }
 
-    private static UnionDefinition? GetUnionDefinition(GeneratorAttributeSyntaxContext context, AttributeSettings defaults, CancellationToken cancellationToken)
+    private static UnionDefinition? GetUnionDefinition(GeneratorAttributeSyntaxContext context, AttributeSettings defaults, CancellationToken _)
     {
         var declaration = (TypeDeclarationSyntax)context.TargetNode;
 
-        var semanticModel = context.SemanticModel;
-
-        var unionSymbol = semanticModel.GetDeclaredSymbol(declaration, cancellationToken);
+        var unionSymbol = context.TargetSymbol;
 
         if (unionSymbol is not INamedTypeSymbol namedType)
         {
@@ -318,9 +316,9 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
         options.TryGetValue("build_property.FunctionalEngine_Defaults_GeneratePrivateConstructor", out string? privateConstructor);
 
         return new AttributeSettings(
-            MatchOn: TryParseEnum<MatchUnionOn>(match) ?? DiscriminatedUnionDefaults.MatchOn,
-            GeneratePolymorphicSerialization: TryParseBool(polymorphicSerialization) ?? DiscriminatedUnionDefaults.GeneratePolymorphicSerialization,
-            GeneratePrivateConstructor: TryParseBool(privateConstructor) ?? DiscriminatedUnionDefaults.GeneratePrivateConstructor
+            MatchOn: TryParseEnum<MatchUnionOn>(match) ?? DiscriminatedUnionDefaults.Instance.MatchOn,
+            GeneratePolymorphicSerialization: TryParseBool(polymorphicSerialization) ?? DiscriminatedUnionDefaults.Instance.GeneratePolymorphicSerialization,
+            GeneratePrivateConstructor: TryParseBool(privateConstructor) ?? DiscriminatedUnionDefaults.Instance.GeneratePrivateConstructor
         );
 
         static bool? TryParseBool(string? text)
