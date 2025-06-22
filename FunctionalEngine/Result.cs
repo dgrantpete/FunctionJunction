@@ -78,9 +78,17 @@ public abstract partial record Result<TOk, TError>
         }
     }
 
+    /// <summary>
+    /// Implicitly converts a <typeparamref name="TOk"/> into an <c>Ok</c> value inside a <see cref="Result{TOk, TError}"/>.
+    /// </summary>
+    /// <param name="ok">The value being converted.</param>
     public static implicit operator Result<TOk, TError>(TOk ok) => 
         new Result<TOk, TError>.Ok(ok);
 
+    /// <summary>
+    /// Implicitly converts a <typeparamref name="TError"/> into an <c>Error</c> value inside a <see cref="Result{TOk, TError}"/>.
+    /// </summary>
+    /// <param name="error">The value being converted.</param>
     public static implicit operator Result<TOk, TError>(TError error) => 
         new Result<TOk, TError>.Error(error);
 
@@ -169,7 +177,7 @@ public abstract partial record Result<TOk, TError>
     /// <summary>
     /// Transforms the error value inside this <see cref="Result{TOk, TError}"/> using the provided function.
     /// If this <see cref="Result{TOk, TError}"/> is <c>Ok</c>, returns the success value unchanged. If this <see cref="Result{TOk, TError}"/> is <c>Error</c>, applies the mapper to the error value.
-    /// This is useful for converting error types or adding additional context to errors.
+    /// Useful for converting error types or adding additional context to errors.
     /// </summary>
     /// <typeparam name="TResult">The type of the transformed error value.</typeparam>
     /// <param name="mapper">A function that transforms the error value to a new value of type <typeparamref name="TResult"/>.</param>
@@ -183,7 +191,7 @@ public abstract partial record Result<TOk, TError>
     /// <summary>
     /// Asynchronously transforms the error value inside this <see cref="Result{TOk, TError}"/> using the provided async function.
     /// If this <see cref="Result{TOk, TError}"/> is <c>Ok</c>, returns the success value unchanged. If this <see cref="Result{TOk, TError}"/> is <c>Error</c>, applies the async mapper to the error value.
-    /// This is useful for async error transformation or adding context that requires async operations.
+    /// Useful for async error transformation or adding context that requires async operations.
     /// </summary>
     /// <typeparam name="TResult">The type of the transformed error value.</typeparam>
     /// <param name="mapperAsync">An async function that transforms the error value to a new value of type <typeparamref name="TResult"/>.</param>
@@ -228,7 +236,7 @@ public abstract partial record Result<TOk, TError>
 
     /// <summary>
     /// Combines this <see cref="Result{TOk, TError}"/> with another <see cref="Result{TOk, TError}"/> if both are successful, returning a tuple of both success values.
-    /// If either <see cref="Result{TOk, TError}"/> is an error, returns the first error encountered. This is useful for combining multiple operations that must all succeed.
+    /// If either <see cref="Result{TOk, TError}"/> is an error, returns the first error encountered. Useful for combining multiple operations that must all succeed.
     /// </summary>
     /// <typeparam name="TOther">The type of the success value in the other <see cref="Result{TOk, TError}"/>.</typeparam>
     /// <param name="otherProvider">A function that provides another <see cref="Result{TOk, TError}"/> to combine with this one.</param>
@@ -239,7 +247,7 @@ public abstract partial record Result<TOk, TError>
 
     /// <summary>
     /// Asynchronously combines this <see cref="Result{TOk, TError}"/> with another <see cref="Result{TOk, TError}"/> if both are successful, returning a tuple of both success values.
-    /// If either <see cref="Result{TOk, TError}"/> is an error, returns the first error encountered. This is useful for combining multiple async operations that must all succeed.
+    /// If either <see cref="Result{TOk, TError}"/> is an error, returns the first error encountered. Useful for combining multiple async operations that must all succeed.
     /// </summary>
     /// <typeparam name="TOther">The type of the success value in the other <see cref="Result{TOk, TError}"/>.</typeparam>
     /// <param name="otherProviderAsync">An async function that provides another <see cref="Result{TOk, TError}"/> to combine with this one.</param>
@@ -250,7 +258,7 @@ public abstract partial record Result<TOk, TError>
 
     /// <summary>
     /// Returns this <see cref="Result{TOk, TError}"/> if it is successful, otherwise attempts to recover using another <see cref="Result{TOk, TError}"/> with a different error type.
-    /// If both results are errors, returns an error containing a tuple of both error values. This is useful for trying alternative operations when the first fails.
+    /// If both results are errors, returns an error containing a tuple of both error values. Useful for trying alternative operations when the first fails.
     /// </summary>
     /// <typeparam name="TOther">The type of the error value in the alternative <see cref="Result{TOk, TError}"/>.</typeparam>
     /// <param name="otherProvider">A function that provides an alternative <see cref="Result{TOk, TError}"/> when this <see cref="Result{TOk, TError}"/> is an error.</param>
@@ -261,7 +269,7 @@ public abstract partial record Result<TOk, TError>
 
     /// <summary>
     /// Asynchronously returns this <see cref="Result{TOk, TError}"/> if it is successful, otherwise attempts to recover using another async <see cref="Result{TOk, TError}"/> with a different error type.
-    /// If both results are errors, returns an error containing a tuple of both error values. This is useful for trying alternative async operations when the first fails.
+    /// If both results are errors, returns an error containing a tuple of both error values. Useful for trying alternative async operations when the first fails.
     /// </summary>
     /// <typeparam name="TOther">The type of the error value in the alternative <see cref="Result{TOk, TError}"/>.</typeparam>
     /// <param name="otherProviderAsync">An async function that provides an alternative <see cref="Result{TOk, TError}"/> when this <see cref="Result{TOk, TError}"/> is an error.</param>
@@ -274,7 +282,7 @@ public abstract partial record Result<TOk, TError>
     /// Swaps the success and error types of this <see cref="Result{TOk, TError}"/>.
     /// If this <see cref="Result{TOk, TError}"/> is <c>Ok</c>, returns an <c>Error</c> containing the success value.
     /// If this <see cref="Result{TOk, TError}"/> is <c>Error</c>, returns an <c>Ok</c> containing the error value.
-    /// This is useful when you need to invert the semantics of success and failure.
+    /// Useful when you need to invert the semantics of success and failure.
     /// </summary>
     /// <returns>A <c>Result&lt;TError, TOk&gt;</c> with the success and error types swapped.</returns>
     [GenerateAsyncExtension]
@@ -286,7 +294,7 @@ public abstract partial record Result<TOk, TError>
 
     /// <summary>
     /// Performs a side effect on the success value if the <see cref="Result{TOk, TError}"/> is <c>Ok</c>, then returns the original <see cref="Result{TOk, TError}"/> unchanged.
-    /// This is useful for logging, debugging, or performing side effects without modifying the <see cref="Result{TOk, TError}"/>.
+    /// Useful for logging, debugging, or performing side effects without modifying the <see cref="Result{TOk, TError}"/>.
     /// </summary>
     /// <param name="tapper">An action to perform on the success value if it exists.</param>
     /// <returns>The original <see cref="Result{TOk, TError}"/> unchanged.</returns>
@@ -300,7 +308,7 @@ public abstract partial record Result<TOk, TError>
 
     /// <summary>
     /// Asynchronously performs a side effect on the success value if the <see cref="Result{TOk, TError}"/> is <c>Ok</c>, then returns the original <see cref="Result{TOk, TError}"/> unchanged.
-    /// This is useful for async logging, debugging, or performing async side effects without modifying the <see cref="Result{TOk, TError}"/>.
+    /// Useful for async logging, debugging, or performing async side effects without modifying the <see cref="Result{TOk, TError}"/>.
     /// </summary>
     /// <param name="tapperAsync">An async action to perform on the success value if it exists.</param>
     /// <returns>A <see cref="Task"/> containing the original <see cref="Result{TOk, TError}"/> unchanged.</returns>
@@ -314,7 +322,7 @@ public abstract partial record Result<TOk, TError>
 
     /// <summary>
     /// Performs a side effect on the error value if the <see cref="Result{TOk, TError}"/> is <c>Error</c>, then returns the original <see cref="Result{TOk, TError}"/> unchanged.
-    /// This is useful for logging, debugging, or performing side effects on errors without modifying the <see cref="Result{TOk, TError}"/>.
+    /// Useful for logging, debugging, or performing side effects on errors without modifying the <see cref="Result{TOk, TError}"/>.
     /// </summary>
     /// <param name="tapper">An action to perform on the error value if it exists.</param>
     /// <returns>The original <see cref="Result{TOk, TError}"/> unchanged.</returns>
@@ -328,7 +336,7 @@ public abstract partial record Result<TOk, TError>
 
     /// <summary>
     /// Asynchronously performs a side effect on the error value if the <see cref="Result{TOk, TError}"/> is <c>Error</c>, then returns the original <see cref="Result{TOk, TError}"/> unchanged.
-    /// This is useful for async logging, debugging, or performing async side effects on errors without modifying the <see cref="Result{TOk, TError}"/>.
+    /// Useful for async logging, debugging, or performing async side effects on errors without modifying the <see cref="Result{TOk, TError}"/>.
     /// </summary>
     /// <param name="tapperAsync">An async action to perform on the error value if it exists.</param>
     /// <returns>A <see cref="Task"/> containing the original <see cref="Result{TOk, TError}"/> unchanged.</returns>
@@ -368,7 +376,7 @@ public abstract partial record Result<TOk, TError>
 
     /// <summary>
     /// Extracts the success value from the <see cref="Result{TOk, TError}"/> if it contains one, otherwise throws an exception created from the error using the exception provider function.
-    /// This is useful when you want to treat an error as an exceptional case with a custom exception.
+    /// Useful when you want to treat an error as an exceptional case with a custom exception.
     /// </summary>
     /// <typeparam name="TException">The type of exception to throw. Must inherit from <see cref="Exception"/>.</typeparam>
     /// <param name="exceptionProvider">A function that creates an exception from the error value when the <see cref="Result{TOk, TError}"/> is <c>Error</c>.</param>
@@ -380,7 +388,7 @@ public abstract partial record Result<TOk, TError>
 
     /// <summary>
     /// Asynchronously extracts the success value from the <see cref="Result{TOk, TError}"/> if it contains one, otherwise throws an exception created from the error using the async exception provider function.
-    /// This is useful when you want to treat an error as an exceptional case with a custom exception that may need to be created asynchronously.
+    /// Useful when you want to treat an error as an exceptional case with a custom exception that may need to be created asynchronously.
     /// </summary>
     /// <typeparam name="TException">The type of exception to throw. Must inherit from <see cref="Exception"/>.</typeparam>
     /// <param name="exceptionProviderAsync">An async function that creates an exception from the error value when the <see cref="Result{TOk, TError}"/> is <c>Error</c>.</param>
@@ -451,7 +459,7 @@ public static class Result
 {
     /// <summary>
     /// Provides helper methods for creating <see cref="Result{TOk, TError}"/> instances when one of the generic types is partially specified.
-    /// This is useful for functional composition where you need to specify one type parameter while leaving the other to be inferred.
+    /// Useful for functional composition where you need to specify one type parameter while leaving the other to be inferred.
     /// </summary>
     /// <typeparam name="TPartial">The partially specified type parameter.</typeparam>
     public static class ApplyType<TPartial>
@@ -497,7 +505,7 @@ public static class Result
     /// Converts a <see cref="Result{TOk, TError}"/> to an <see cref="Option{T}"/> of the success value.
     /// If the <see cref="Result{TOk, TError}"/> is <c>Ok</c>, returns <c>Some</c> containing the success value.
     /// If the <see cref="Result{TOk, TError}"/> is <c>Error</c>, returns <c>None</c>.
-    /// This is useful for when you want to ignore the error and just work with optional success values.
+    /// Useful for when you want to ignore the error and just work with optional success values.
     /// </summary>
     /// <typeparam name="TOk">The type of the success value. Must be non-null.</typeparam>
     /// <typeparam name="TError">The type of the error value.</typeparam>
@@ -514,7 +522,7 @@ public static class Result
     /// Converts a <see cref="Result{TOk, TError}"/> to an <see cref="Option{T}"/> of the error value.
     /// If the <see cref="Result{TOk, TError}"/> is <c>Error</c>, returns <c>Some</c> containing the error value.
     /// If the <see cref="Result{TOk, TError}"/> is <c>Ok</c>, returns <c>None</c>.
-    /// This is useful for when you want to ignore the success and just work with optional error values.
+    /// Useful for when you want to ignore the success and just work with optional error values.
     /// </summary>
     /// <typeparam name="TOk">The type of the success value.</typeparam>
     /// <typeparam name="TError">The type of the error value. Must be non-null.</typeparam>
@@ -567,7 +575,7 @@ public static class Result
     /// Converts a <see cref="Result{TOk, TError}"/> to a nullable reference type.
     /// If the <see cref="Result{TOk, TError}"/> is <c>Ok</c>, returns the success value.
     /// If the <see cref="Result{TOk, TError}"/> is <c>Error</c>, returns <see langword="null"/>.
-    /// This is useful for interoperating with APIs that expect nullable reference types.
+    /// Useful for interoperating with APIs that expect nullable reference types.
     /// </summary>
     /// <typeparam name="TOk">The reference type to extract from the <see cref="Result{TOk, TError}"/>.</typeparam>
     /// <typeparam name="TError">The type of the error value.</typeparam>
@@ -584,7 +592,7 @@ public static class Result
     /// Converts a <see cref="Result{TOk, TError}"/> to a nullable value type.
     /// If the <see cref="Result{TOk, TError}"/> is <c>Ok</c>, returns the success value.
     /// If the <see cref="Result{TOk, TError}"/> is <c>Error</c>, returns <see langword="null"/>.
-    /// This is useful for interoperating with APIs that expect nullable value types.
+    /// Useful for interoperating with APIs that expect nullable value types.
     /// </summary>
     /// <typeparam name="TOk">The value type to extract from the <see cref="Result{TOk, TError}"/>.</typeparam>
     /// <typeparam name="TError">The type of the error value.</typeparam>
@@ -614,7 +622,7 @@ public static class Result
 
     /// <summary>
     /// Extracts the success value from the <see cref="Result{TOk, TError}"/> if it contains one, otherwise throws the error value directly as an exception.
-    /// This is useful when the error type is already an exception and you want to throw it directly.
+    /// Useful when the error type is already an exception and you want to throw it directly.
     /// </summary>
     /// <typeparam name="TOk">The type of the success value.</typeparam>
     /// <typeparam name="TException">The exception type that serves as the error value. Must inherit from <see cref="Exception"/>.</typeparam>

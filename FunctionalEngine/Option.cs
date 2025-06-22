@@ -33,6 +33,10 @@ public readonly record struct Option<T> where T : notnull
         internalValue = value;
     }
 
+    /// <summary>
+    /// Implicitly converts a nullable <typeparamref name="T"/> into an <see cref="Option{T}"/>, where the value is <c>Some</c> if it isn't <see langword="null"></see>.
+    /// </summary>
+    /// <param name="value">The value being converted.</param>
     public static implicit operator Option<T>(T? value) => value switch
     {
         not null => new Option<T>(value),
@@ -162,7 +166,7 @@ public readonly record struct Option<T> where T : notnull
 
     /// <summary>
     /// Combines this <see cref="Option{T}"/> with another <see cref="Option{T}"/> if both contain values, returning a tuple of both values.
-    /// If either <see cref="Option{T}"/> is <c>None</c>, returns <c>None</c>. This is useful for combining multiple optional values.
+    /// If either <see cref="Option{T}"/> is <c>None</c>, returns <c>None</c>. Useful for combining multiple optional values.
     /// </summary>
     /// <typeparam name="TOther">The type of the value in the other <see cref="Option{T}"/>. Must be non-null.</typeparam>
     /// <param name="otherProvider">A function that provides another <see cref="Option{T}"/> to combine with this one.</param>
@@ -173,7 +177,7 @@ public readonly record struct Option<T> where T : notnull
 
     /// <summary>
     /// Asynchronously combines this <see cref="Option{T}"/> with another <see cref="Option{T}"/> if both contain values, returning a tuple of both values.
-    /// If either <see cref="Option{T}"/> is <c>None</c>, returns <c>None</c>. This is useful for combining multiple async optional values.
+    /// If either <see cref="Option{T}"/> is <c>None</c>, returns <c>None</c>. Useful for combining multiple async optional values.
     /// </summary>
     /// <typeparam name="TOther">The type of the value in the other <see cref="Option{T}"/>. Must be non-null.</typeparam>
     /// <param name="otherProviderAsync">An async function that provides another <see cref="Option{T}"/> to combine with this one.</param>
@@ -187,7 +191,7 @@ public readonly record struct Option<T> where T : notnull
 
     /// <summary>
     /// Performs a side effect on the contained value if the <see cref="Option{T}"/> is <c>Some</c>, then returns the original <see cref="Option{T}"/> unchanged.
-    /// This is useful for logging, debugging, or performing side effects without modifying the <see cref="Option{T}"/>.
+    /// Useful for logging, debugging, or performing side effects without modifying the <see cref="Option{T}"/>.
     /// </summary>
     /// <param name="tapper">An action to perform on the contained value if it exists.</param>
     /// <returns>The original <see cref="Option{T}"/> unchanged.</returns>
@@ -201,7 +205,7 @@ public readonly record struct Option<T> where T : notnull
 
     /// <summary>
     /// Asynchronously performs a side effect on the contained value if the <see cref="Option{T}"/> is <c>Some</c>, then returns the original <see cref="Option{T}"/> unchanged.
-    /// This is useful for async logging, debugging, or performing async side effects without modifying the <see cref="Option{T}"/>.
+    /// Useful for async logging, debugging, or performing async side effects without modifying the <see cref="Option{T}"/>.
     /// </summary>
     /// <param name="tapperAsync">An async action to perform on the contained value if it exists.</param>
     /// <returns>A <see cref="Task"/> containing the original <see cref="Option{T}"/> unchanged.</returns>
@@ -215,7 +219,7 @@ public readonly record struct Option<T> where T : notnull
 
     /// <summary>
     /// Performs a side effect if the <see cref="Option{T}"/> is <c>None</c>, then returns the original <see cref="Option{T}"/> unchanged.
-    /// This is useful for logging, debugging, or performing side effects when no value is present.
+    /// Useful for logging, debugging, or performing side effects when no value is present.
     /// </summary>
     /// <param name="tapper">An action to perform when the <see cref="Option{T}"/> is <c>None</c>.</param>
     /// <returns>The original <see cref="Option{T}"/> unchanged.</returns>
@@ -229,7 +233,7 @@ public readonly record struct Option<T> where T : notnull
 
     /// <summary>
     /// Asynchronously performs a side effect if the <see cref="Option{T}"/> is <c>None</c>, then returns the original <see cref="Option{T}"/> unchanged.
-    /// This is useful for async logging, debugging, or performing async side effects when no value is present.
+    /// Useful for async logging, debugging, or performing async side effects when no value is present.
     /// </summary>
     /// <param name="tapperAsync">An async action to perform when the <see cref="Option{T}"/> is <c>None</c>.</param>
     /// <returns>A <see cref="Task"/> containing the original <see cref="Option{T}"/> unchanged.</returns>
@@ -269,7 +273,7 @@ public readonly record struct Option<T> where T : notnull
 
     /// <summary>
     /// Extracts the value from the <see cref="Option{T}"/> if it contains one, otherwise throws an exception provided by the exception provider function.
-    /// This is useful when you want to treat a <c>None</c> value as an exceptional case with a custom exception.
+    /// Useful when you want to treat a <c>None</c> value as an exceptional case with a custom exception.
     /// </summary>
     /// <typeparam name="TException">The type of exception to throw. Must inherit from <see cref="Exception"/>.</typeparam>
     /// <param name="exceptionProvider">A function that provides the exception to throw when the <see cref="Option{T}"/> is <c>None</c>.</param>
@@ -281,7 +285,7 @@ public readonly record struct Option<T> where T : notnull
 
     /// <summary>
     /// Asynchronously extracts the value from the <see cref="Option{T}"/> if it contains one, otherwise throws an exception provided by the async exception provider function.
-    /// This is useful when you want to treat a <c>None</c> value as an exceptional case with a custom exception that may need to be created asynchronously.
+    /// Useful when you want to treat a <c>None</c> value as an exceptional case with a custom exception that may need to be created asynchronously.
     /// </summary>
     /// <typeparam name="TException">The type of exception to throw. Must inherit from <see cref="Exception"/>.</typeparam>
     /// <param name="exceptionProvider">An async function that provides the exception to throw when the <see cref="Option{T}"/> is <c>None</c>.</param>
@@ -306,7 +310,7 @@ public readonly record struct Option<T> where T : notnull
     /// <summary>
     /// Filters the <see cref="Option{T}"/> to only contain values that are of the specified type.
     /// If the contained value is of type <typeparamref name="TResult"/>, returns an <see cref="Option{T}"/> containing that value.
-    /// Otherwise, returns <c>None</c>. This is useful for safe type filtering without exceptions.
+    /// Otherwise, returns <c>None</c>. Useful for safe type filtering without exceptions.
     /// </summary>
     /// <typeparam name="TResult">The type to filter for. Must be non-null.</typeparam>
     /// <returns>An <c>Option&lt;TResult&gt;</c> containing the value if it is of type <typeparamref name="TResult"/>, otherwise <c>None</c>.</returns>
@@ -385,7 +389,7 @@ public static class Option
     /// Converts an <see cref="Option{T}"/> to a <see cref="Result{TOk, T}"/>, treating the <see cref="Option{T}"/> value as an error case.
     /// If the <see cref="Option{T}"/> is <c>Some</c>, returns an <c>Error</c> result with the contained value.
     /// If the <see cref="Option{T}"/> is <c>None</c>, returns an <c>Ok</c> result with the value provided by the ok provider function.
-    /// This is useful when the presence of a value indicates an error condition.
+    /// Useful when the presence of a value indicates an error condition.
     /// </summary>
     /// <typeparam name="TOk">The type of the ok value to use when the <see cref="Option{T}"/> is <c>None</c>.</typeparam>
     /// <typeparam name="T">The type of the value in the <see cref="Option{T}"/>. Must be non-null.</typeparam>
@@ -405,7 +409,7 @@ public static class Option
     /// Converts an <see cref="Option{T}"/> to a nullable reference type.
     /// If the <see cref="Option{T}"/> is <c>Some</c>, returns the contained value.
     /// If the <see cref="Option{T}"/> is <c>None</c>, returns <see langword="null"/>.
-    /// This is useful for interoperating with APIs that expect nullable reference types.
+    /// Useful for interoperating with APIs that expect nullable reference types.
     /// </summary>
     /// <typeparam name="T">The reference type contained in the <see cref="Option{T}"/>.</typeparam>
     /// <param name="option">The <see cref="Option{T}"/> to convert.</param>
@@ -421,7 +425,7 @@ public static class Option
     /// Converts an <see cref="Option{T}"/> to a nullable value type.
     /// If the <see cref="Option{T}"/> is <c>Some</c>, returns the contained value.
     /// If the <see cref="Option{T}"/> is <c>None</c>, returns <see langword="null"/>.
-    /// This is useful for interoperating with APIs that expect nullable value types.
+    /// Useful for interoperating with APIs that expect nullable value types.
     /// </summary>
     /// <typeparam name="T">The value type contained in the <see cref="Option{T}"/>.</typeparam>
     /// <param name="option">The <see cref="Option{T}"/> to convert.</param>
@@ -461,7 +465,7 @@ public static class Option
     /// Creates an <see cref="Option{T}"/> from a nullable reference type.
     /// If the value is not <see langword="null"/>, returns <c>Some</c> containing the value.
     /// If the value is <see langword="null"/>, returns <c>None</c>.
-    /// This is useful for converting nullable reference types to the safer <see cref="Option{T}"/> type.
+    /// Useful for converting nullable reference types to the safer <see cref="Option{T}"/> type.
     /// </summary>
     /// <typeparam name="T">The reference type to wrap in an <see cref="Option{T}"/>.</typeparam>
     /// <param name="value">The nullable value to convert.</param>
@@ -476,7 +480,7 @@ public static class Option
     /// Asynchronously creates an <see cref="Option{T}"/> from a <see cref="Task"/> containing a nullable reference type.
     /// If the awaited value is not <see langword="null"/>, returns <c>Some</c> containing the value.
     /// If the awaited value is <see langword="null"/>, returns <c>None</c>.
-    /// This is useful for converting async operations that return nullable reference types to the safer <see cref="Option{T}"/> type.
+    /// Useful for converting async operations that return nullable reference types to the safer <see cref="Option{T}"/> type.
     /// </summary>
     /// <typeparam name="T">The reference type to wrap in an <see cref="Option{T}"/>.</typeparam>
     /// <param name="valueTask">The task containing the nullable value to convert.</param>
@@ -491,7 +495,7 @@ public static class Option
     /// Creates an <see cref="Option{T}"/> from a nullable value type.
     /// If the value has a value, returns <c>Some</c> containing the value.
     /// If the value is <see langword="null"/>, returns <c>None</c>.
-    /// This is useful for converting nullable value types to the safer <see cref="Option{T}"/> type.
+    /// Useful for converting nullable value types to the safer <see cref="Option{T}"/> type.
     /// </summary>
     /// <typeparam name="T">The value type to wrap in an <see cref="Option{T}"/>.</typeparam>
     /// <param name="value">The nullable value to convert.</param>
@@ -506,7 +510,7 @@ public static class Option
     /// Asynchronously creates an <see cref="Option{T}"/> from a <see cref="Task"/> containing a nullable value type.
     /// If the awaited value has a value, returns <c>Some</c> containing the value.
     /// If the awaited value is <see langword="null"/>, returns <c>None</c>.
-    /// This is useful for converting async operations that return nullable value types to the safer <see cref="Option{T}"/> type.
+    /// Useful for converting async operations that return nullable value types to the safer <see cref="Option{T}"/> type.
     /// </summary>
     /// <typeparam name="T">The value type to wrap in an <see cref="Option{T}"/>.</typeparam>
     /// <param name="valueTask">The task containing the nullable value to convert.</param>
@@ -521,7 +525,7 @@ public static class Option
     /// Flattens a nested <see cref="Option{T}"/> by removing one level of nesting.
     /// If the outer <see cref="Option{T}"/> is <c>Some</c> containing an inner <see cref="Option{T}"/>, returns the inner <see cref="Option{T}"/>.
     /// If the outer <see cref="Option{T}"/> is <c>None</c>, returns <c>None</c>.
-    /// This is useful for simplifying nested <see cref="Option{T}"/> structures.
+    /// Useful for simplifying nested <see cref="Option{T}"/> structures.
     /// </summary>
     /// <typeparam name="T">The type of the value in the inner <see cref="Option{T}"/>. Must be non-null.</typeparam>
     /// <param name="option">The nested <see cref="Option{T}"/> to flatten.</param>
@@ -534,7 +538,7 @@ public static class Option
     /// Combines multiple <see cref="Option{T}"/> values into a single <see cref="Option{T}"/> containing a list of all values.
     /// If all <see cref="Option{T}"/> values are <c>Some</c>, returns <c>Some</c> containing a list of all values in order.
     /// If any <see cref="Option{T}"/> is <c>None</c>, returns <c>None</c>.
-    /// This is useful for operations that require all optional values to be present.
+    /// Useful for operations that require all optional values to be present.
     /// </summary>
     /// <typeparam name="T">The type of the values in the <see cref="Option{T}"/> collection. Must be non-null.</typeparam>
     /// <param name="options">The collection of <see cref="Option{T}"/> values to combine.</param>
@@ -554,7 +558,7 @@ public static class Option
     /// Each provider function is called to get its <see cref="Option{T}"/>, then all results are combined.
     /// If all providers return <c>Some</c>, returns <c>Some</c> containing a list of all values in order.
     /// If any provider returns <c>None</c>, returns <c>None</c>.
-    /// This is useful for lazy evaluation of multiple optional computations.
+    /// Useful for lazy evaluation of multiple optional computations.
     /// </summary>
     /// <typeparam name="T">The type of the values in the <see cref="Option{T}"/> collection. Must be non-null.</typeparam>
     /// <param name="optionProviders">The collection of functions that provide <see cref="Option{T}"/> values to combine.</param>
@@ -565,7 +569,7 @@ public static class Option
     /// <summary>
     /// Returns the first <see cref="Option{T}"/> that contains a value from a collection of <see cref="Option{T}"/> values.
     /// If no <see cref="Option{T}"/> contains a value, returns <c>None</c>.
-    /// This is useful for finding the first successful result from multiple optional operations.
+    /// Useful for finding the first successful result from multiple optional operations.
     /// </summary>
     /// <typeparam name="T">The type of the values in the <see cref="Option{T}"/> collection. Must be non-null.</typeparam>
     /// <param name="options">The collection of <see cref="Option{T}"/> values to search through.</param>
@@ -577,7 +581,7 @@ public static class Option
     /// Returns the first <see cref="Option{T}"/> that contains a value from a collection of <see cref="Option{T}"/> provider functions.
     /// Each provider function is called in sequence until one returns <c>Some</c>, or all have been tried.
     /// If no provider returns a value, returns <c>None</c>.
-    /// This is useful for lazy evaluation when trying multiple optional operations in sequence.
+    /// Useful for lazy evaluation when trying multiple optional operations in sequence.
     /// </summary>
     /// <typeparam name="T">The type of the values in the <see cref="Option{T}"/> collection. Must be non-null.</typeparam>
     /// <param name="optionProviders">The collection of functions that provide <see cref="Option{T}"/> values to search through.</param>
