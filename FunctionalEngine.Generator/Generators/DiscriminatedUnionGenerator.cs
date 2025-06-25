@@ -19,6 +19,8 @@ namespace FunctionalEngine.Generator.Generators;
 [Generator("C#")]
 internal class DiscriminatedUnionGenerator : IIncrementalGenerator
 {
+    #region Template and Initialization
+
     private const string JsonDerivedTypeAttribute = "System.Text.Json.Serialization.JsonDerivedTypeAttribute";
 
     private const string Func = "System.Func";
@@ -82,6 +84,10 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
             context.AddSource($"{renderModel.Name}.g.cs", SourceText.From(generatedCode, Encoding.UTF8));
         });
     }
+
+    #endregion
+
+    #region Data Extraction
 
     private static UnionInfo? GetUnionInfo(
         GeneratorAttributeSyntaxContext context, 
@@ -165,6 +171,121 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
 
         return new(parameters, accessibility);
     }
+
+    #endregion
+
+    #region Helper Methods
+
+    private static ConstantSymbols GetConstantSymbols(Compilation compilation, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (compilation.GetTypeByMetadataName(DiscriminatedUnionDefaults.AttributeName) is not INamedTypeSymbol unionAttribute)
+        {
+            var types = compilation.GetTypesByMetadataName(DiscriminatedUnionDefaults.AttributeName);
+
+            throw new InvalidOperationException($"{types.Length} {string.Join(", ", types)}");
+
+            throw new InvalidOperationException($"The symbol for {nameof(DiscriminatedUnionAttribute)} could not be loaded.");
+        }
+
+        var jsonDerivedTypeAttribute = compilation
+            .GetTypeByMetadataName(JsonDerivedTypeAttribute);
+
+        return new(unionAttribute)
+        {
+            JsonDerivedTypeAttribute = jsonDerivedTypeAttribute
+        };
+    }
+
+    private static AttributeInfo GetAttributeInfo(AttributeData attribute, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var unionArguments = attribute.NamedArguments
+            .ToImmutableDictionary(
+                argument => argument.Key, 
+                TypedConstant? (argument) => argument.Value
+            );
+
+        return new()
+        {
+            MatchOn = unionArguments.GetValueOrDefault(nameof(DiscriminatedUnionAttribute.MatchOn))
+                ?.Value as MatchUnionOn?,
+            GeneratePolymorphicSerialization = unionArguments.GetValueOrDefault(nameof(DiscriminatedUnionAttribute.GeneratePolymorphicSerialization))
+                ?.Value as bool?,
+            GeneratePrivateConstructor = unionArguments.GetValueOrDefault(nameof(DiscriminatedUnionAttribute.GeneratePrivateConstructor))
+                ?.Value as bool?
+        };
+    }
+
+    private static ObjectType? GetObjectType(ITypeSymbol typeSymbol) => typeSymbol switch
+    {
+        { IsRecord: false, TypeKind: TypeKind.Class } => ObjectType.Class,
+        { IsRecord: true, TypeKind: TypeKind.Class } => ObjectType.Record,
+        _ => null
+    };
+
+    private static AttributeInfo GetDefaultAttributeInfo(AnalyzerConfigOptions options, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        
+        options.TryGetValue(
+            $"build_property.FunctionalEngine_Defaults_{nameof(DiscriminatedUnionAttribute.MatchOn)}", 
+            out string? match
+        );
+
+        options.TryGetValue(
+            $"build_property.FunctionalEngine_Defaults_{nameof(DiscriminatedUnionAttribute.GeneratePolymorphicSerialization)}", 
+            out string? polymorphicSerialization
+        );
+
+        options.TryGetValue(
+            $"build_property.FunctionalEngine_Defaults_{nameof(DiscriminatedUnionAttribute.GeneratePrivateConstructor)}", 
+            out string? privateConstructor
+        );
+
+        return new()
+        {
+            MatchOn = TryParseEnum<MatchUnionOn>(match),
+            GeneratePolymorphicSerialization = TryParseBool(polymorphicSerialization),
+            GeneratePrivateConstructor = TryParseBool(privateConstructor)
+        };
+
+        static bool? TryParseBool(string? text)
+        {
+            if (text is null or "")
+            {
+                return null;
+            }
+
+            if (!bool.TryParse(text, out bool value))
+            {
+                return null;
+            }
+
+            return value;
+        }
+
+        static T? TryParseEnum<T>(string? text) where T : struct, Enum
+        {
+            if (text is null or "")
+            {
+                return null;
+            }
+
+            if (!Enum.TryParse<T>(text, out T value))
+            {
+                return null;
+            }
+
+            return value;
+        }
+    }
+
+    #endregion
+
+    #region Model Creation
 
     private static UnionRenderModel? CreateUnionModel(
         UnionInfo unionInfo,
@@ -368,112 +489,9 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
             .Select(memberContext => $"[{JsonDerivedTypeAttribute}(typeof({memberContext.Type}))]");
     }
 
-    private static AttributeInfo GetAttributeInfo(AttributeData attribute, CancellationToken cancellationToken = default)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
+    #endregion
 
-        var unionArguments = attribute.NamedArguments
-            .ToImmutableDictionary(
-                argument => argument.Key, 
-                TypedConstant? (argument) => argument.Value
-            );
-
-        return new()
-        {
-            MatchOn = unionArguments.GetValueOrDefault(nameof(DiscriminatedUnionAttribute.MatchOn))
-                ?.Value as MatchUnionOn?,
-            GeneratePolymorphicSerialization = unionArguments.GetValueOrDefault(nameof(DiscriminatedUnionAttribute.GeneratePolymorphicSerialization))
-                ?.Value as bool?,
-            GeneratePrivateConstructor = unionArguments.GetValueOrDefault(nameof(DiscriminatedUnionAttribute.GeneratePrivateConstructor))
-                ?.Value as bool?
-        };
-    }
-
-    private static ConstantSymbols GetConstantSymbols(Compilation compilation, CancellationToken cancellationToken = default)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-
-        if (compilation.GetTypeByMetadataName(DiscriminatedUnionDefaults.AttributeName) is not INamedTypeSymbol unionAttribute)
-        {
-            var types = compilation.GetTypesByMetadataName(DiscriminatedUnionDefaults.AttributeName);
-
-            throw new InvalidOperationException($"{types.Length} {string.Join(", ", types)}");
-
-            throw new InvalidOperationException($"The symbol for {nameof(DiscriminatedUnionAttribute)} could not be loaded.");
-        }
-
-        var jsonDerivedTypeAttribute = compilation
-            .GetTypeByMetadataName(JsonDerivedTypeAttribute);
-
-        return new(unionAttribute)
-        {
-            JsonDerivedTypeAttribute = jsonDerivedTypeAttribute
-        };
-    }
-
-    private static ObjectType? GetObjectType(ITypeSymbol typeSymbol) => typeSymbol switch
-    {
-        { IsRecord: false, TypeKind: TypeKind.Class } => ObjectType.Class,
-        { IsRecord: true, TypeKind: TypeKind.Class } => ObjectType.Record,
-        _ => null
-    };
-
-    private static AttributeInfo GetDefaultAttributeInfo(AnalyzerConfigOptions options, CancellationToken cancellationToken = default)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        
-        options.TryGetValue(
-            $"build_property.FunctionalEngine_Defaults_{nameof(DiscriminatedUnionAttribute.MatchOn)}", 
-            out string? match
-        );
-
-        options.TryGetValue(
-            $"build_property.FunctionalEngine_Defaults_{nameof(DiscriminatedUnionAttribute.GeneratePolymorphicSerialization)}", 
-            out string? polymorphicSerialization
-        );
-
-        options.TryGetValue(
-            $"build_property.FunctionalEngine_Defaults_{nameof(DiscriminatedUnionAttribute.GeneratePrivateConstructor)}", 
-            out string? privateConstructor
-        );
-
-        return new()
-        {
-            MatchOn = TryParseEnum<MatchUnionOn>(match),
-            GeneratePolymorphicSerialization = TryParseBool(polymorphicSerialization),
-            GeneratePrivateConstructor = TryParseBool(privateConstructor)
-        };
-
-        static bool? TryParseBool(string? text)
-        {
-            if (text is null or "")
-            {
-                return null;
-            }
-
-            if (!bool.TryParse(text, out bool value))
-            {
-                return null;
-            }
-
-            return value;
-        }
-
-        static T? TryParseEnum<T>(string? text) where T : struct, Enum
-        {
-            if (text is null or "")
-            {
-                return null;
-            }
-
-            if (!Enum.TryParse<T>(text, out T value))
-            {
-                return null;
-            }
-
-            return value;
-        }
-    }
+    #region Code Rendering
 
     private static class DisplayFormat
     {
@@ -489,6 +507,10 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
                 genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters
             );
     }
+
+    #endregion
+
+    #region Data Models
 
     private readonly record struct UnionInfo(
         string Name,
@@ -555,17 +577,40 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
         string MatchArm
     );
 
-    private enum ObjectType
+    private readonly record struct ConstantSymbols(INamedTypeSymbol UnionAttribute)
     {
-        Class,
-        Record
+        public INamedTypeSymbol? JsonDerivedTypeAttribute { get; init; }
     }
 
-    private enum SymbolIdType
+    private readonly record struct AttributeSettings(
+        MatchUnionOn MatchOn,
+        bool GeneratePolymorphicSerialization,
+        bool GeneratePrivateConstructor
+    );
+
+    private readonly record struct AttributeInfo
     {
-        Reference,
-        Declaration
-    };
+        public MatchUnionOn? MatchOn { get; init; }
+
+        public bool? GeneratePolymorphicSerialization { get; init; }
+
+        public bool? GeneratePrivateConstructor { get; init; }
+
+        public AttributeInfo Or(AttributeInfo other) =>
+            this with
+            {
+                MatchOn = MatchOn ?? other.MatchOn,
+                GeneratePolymorphicSerialization = GeneratePolymorphicSerialization ?? other.GeneratePolymorphicSerialization,
+                GeneratePrivateConstructor = GeneratePrivateConstructor ?? other.GeneratePrivateConstructor
+            };
+
+        public AttributeSettings ToSettings() =>
+            new(
+                MatchOn ?? DiscriminatedUnionDefaults.Instance.MatchOn,
+                GeneratePolymorphicSerialization ?? DiscriminatedUnionDefaults.Instance.GeneratePolymorphicSerialization,
+                GeneratePrivateConstructor ?? DiscriminatedUnionDefaults.Instance.GeneratePrivateConstructor
+            );
+    }
 
     private readonly record struct SymbolId<TSymbol>(string Id, SymbolIdType Type) where TSymbol : class, ISymbol
     {
@@ -626,38 +671,17 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
         }
     }
 
-    private readonly record struct ConstantSymbols(INamedTypeSymbol UnionAttribute)
+    private enum ObjectType
     {
-        public INamedTypeSymbol? JsonDerivedTypeAttribute { get; init; }
-    };
-
-    private readonly record struct AttributeSettings(
-        MatchUnionOn MatchOn,
-        bool GeneratePolymorphicSerialization,
-        bool GeneratePrivateConstructor
-    );
-
-    private readonly record struct AttributeInfo
-    {
-        public MatchUnionOn? MatchOn { get; init; }
-
-        public bool? GeneratePolymorphicSerialization { get; init; }
-
-        public bool? GeneratePrivateConstructor { get; init; }
-
-        public AttributeInfo Or(AttributeInfo other) =>
-            this with
-            {
-                MatchOn = MatchOn ?? other.MatchOn,
-                GeneratePolymorphicSerialization = GeneratePolymorphicSerialization ?? other.GeneratePolymorphicSerialization,
-                GeneratePrivateConstructor = GeneratePrivateConstructor ?? other.GeneratePrivateConstructor
-            };
-
-        public AttributeSettings ToSettings() =>
-            new(
-                MatchOn ?? DiscriminatedUnionDefaults.Instance.MatchOn,
-                GeneratePolymorphicSerialization ?? DiscriminatedUnionDefaults.Instance.GeneratePolymorphicSerialization,
-                GeneratePrivateConstructor ?? DiscriminatedUnionDefaults.Instance.GeneratePrivateConstructor
-            );
+        Class,
+        Record
     }
+
+    private enum SymbolIdType
+    {
+        Reference,
+        Declaration
+    }
+
+    #endregion
 }
