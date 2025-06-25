@@ -1,6 +1,6 @@
 ﻿using FunctionalEngine.Generator.Internal;
+using FunctionalEngine.Generator.Internal.Attributes;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Text;
@@ -12,13 +12,18 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using Accessibility = FunctionalEngine.Generator.Internal.Accessibility;
 
 namespace FunctionalEngine.Generator.Generators;
 
 [Generator("C#")]
 internal class DiscriminatedUnionGenerator : IIncrementalGenerator
 {
+    #region Template and Initialization
+
     private const string JsonDerivedTypeAttribute = "System.Text.Json.Serialization.JsonDerivedTypeAttribute";
+
+    private const string Func = "System.Func";
 
     private static readonly Lazy<Template> template = new(() =>
     {
@@ -38,290 +43,212 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        var defaultAttributeProvider = context.AnalyzerConfigOptionsProvider
-            .Select((options, _) => GetDefaultAttributeSettings(options.GlobalOptions));
-
-        var parseInfoProvider = context.ParseOptionsProvider
-            .Select(static (parseOptions, _) =>
-            {
-                var languageVersion = ((CSharpParseOptions)parseOptions)
-                    .LanguageVersion;
-
-                var switchExpressionsSupported = languageVersion >= LanguageVersion.CSharp8;
-
-                return new ParseInfo(languageVersion, switchExpressionsSupported);
-            });
-
-        var compilationInfoProvider = context.CompilationProvider
-            .Select(static (compilation, _) =>
-            {
-                var polymorphicAttribute = compilation
-                    .GetTypeByMetadataName(JsonDerivedTypeAttribute);
-
-                var serializationAttributeExists = polymorphicAttribute is not null;
-
-                return new CompilationInfo(serializationAttributeExists);
-            });
-
-        var unionDefinitionProvider = context.SyntaxProvider
-            .ForAttributeWithMetadataName(
-                DiscriminatedUnionDefaults.AttributeName,
-                static (node, _) => node is RecordDeclarationSyntax or ClassDeclarationSyntax,
-                static (context, _) => context
-            )
-            .Combine(defaultAttributeProvider)
-            .Select(static (data, cancellationToken) => GetUnionDefinition(data.Left, data.Right, cancellationToken))
-            .SelectMany<UnionDefinition?, UnionDefinition>((maybeDefinition, _) => maybeDefinition switch
-            {
-                null => [],
-                { } definition => [definition]
-            });
-
-        var unionProvider = unionDefinitionProvider.Combine(compilationInfoProvider)
-            .Combine(parseInfoProvider)
-            .Select(static (data, _) =>
-                (
-                    UnionDefinition: data.Left.Left,
-                    CompilationInfo: data.Left.Right,
-                    ParseInfo: data.Right
-                )
+        var projectAttributeDefaultsProvider = context.AnalyzerConfigOptionsProvider
+            .Select((options, cancellationToken) => 
+                GetDefaultAttributeInfo(options.GlobalOptions, cancellationToken)
             );
 
-        context.RegisterSourceOutput(unionProvider, static (context, data) =>
+        var constantSymbolsProvider = context.CompilationProvider
+            .Select(GetConstantSymbols);
+
+        var unionInfoProvider = context.SyntaxProvider
+                .ForAttributeWithMetadataName(
+                DiscriminatedUnionDefaults.AttributeName,
+                (syntaxNode, _) => syntaxNode is RecordDeclarationSyntax or ClassDeclarationSyntax,
+                (context, _) => context
+            )
+            .Combine(constantSymbolsProvider)
+            .Select((value, cancellationToken) =>
+            {
+                var (context, constantSymbols) = value;
+
+                return GetUnionInfo(context, constantSymbols, cancellationToken);
+            })
+            .WhereNotNull();
+
+        var renderModelProvider = unionInfoProvider.Combine(projectAttributeDefaultsProvider)
+            .Combine(constantSymbolsProvider)
+            .Combine(context.CompilationProvider)
+            .Select((value, cancellationToken) =>
+            {
+                var (((unionInfo, constantSymbols), projectAttributeDefaults), compilation) = value;
+
+                return CreateUnionModel(unionInfo, compilation, constantSymbols, projectAttributeDefaults, cancellationToken);
+            })
+            .WhereNotNull();
+
+        context.RegisterSourceOutput(renderModelProvider, static (context, renderModel) =>
         {
-            var definition = data.UnionDefinition;
-            var compilation = data.CompilationInfo;
-            var parse = data.ParseInfo;
+            var generatedCode = template.Value.Render(renderModel);
 
-            if (definition.Failure is { } failure)
-            {
-                context.ReportDiagnostic(failure);
-                return;
-            }
-
-            if (definition.AttributeSettings.MatchOn is not MatchUnionOn.None && !parse.SwitchExpressionsSupported)
-            {
-                var diagnostic = Diagnostic.Create(
-                    Diagnostics.SwitchExpressionsNotSupported,
-                    definition.AttributeLocation,
-                    parse.LanguageVersion.ToDisplayString()
-                );
-
-                context.ReportDiagnostic(diagnostic);
-
-                definition = definition with
-                {
-                    AttributeSettings = definition.AttributeSettings with { MatchOn = MatchUnionOn.None }
-                };
-            }
-
-            if (definition.AttributeSettings.GeneratePolymorphicSerialization && !compilation.SerializationAttributesExist)
-            {
-                var diagnostic = Diagnostic.Create(
-                    Diagnostics.DerivedTypeAttributeNotFound,
-                    definition.AttributeLocation,
-                    definition.Name
-                );
-
-                context.ReportDiagnostic(diagnostic);
-
-                definition = definition with 
-                { 
-                    AttributeSettings = definition.AttributeSettings with { GeneratePolymorphicSerialization = false } 
-                };
-            }
-
-            if (definition.AttributeSettings.GeneratePolymorphicSerialization && (definition.Name.Plain != definition.Name.WithGenerics))
-            {
-                var diagnostic = Diagnostic.Create(
-                    Diagnostics.GenericsIncompatibleWithSerialization,
-                    definition.AttributeLocation
-                );
-
-                context.ReportDiagnostic(diagnostic);
-
-                definition = definition with
-                {
-                    AttributeSettings = definition.AttributeSettings with { GeneratePolymorphicSerialization = false }
-                };
-            }
-
-            var generatedCode = template.Value.Render(definition);
-
-            context.AddSource($"{definition.Name.Plain}.g.cs", SourceText.From(generatedCode, Encoding.UTF8));
+            context.AddSource($"{renderModel.Name}.g.cs", SourceText.From(generatedCode, Encoding.UTF8));
         });
     }
 
-    private static UnionDefinition? GetUnionDefinition(GeneratorAttributeSyntaxContext context, AttributeSettings defaults, CancellationToken cancellationToken)
+    #endregion
+
+    #region Data Extraction
+
+    private static UnionInfo? GetUnionInfo(
+        GeneratorAttributeSyntaxContext context, 
+        ConstantSymbols constantSymbols, 
+        CancellationToken cancellationToken = default
+    )
     {
-        var declaration = (TypeDeclarationSyntax)context.TargetNode;
+        cancellationToken.ThrowIfCancellationRequested();
 
-        var semanticModel = context.SemanticModel;
-
-        var unionSymbol = semanticModel.GetDeclaredSymbol(declaration, cancellationToken);
-
-        if (unionSymbol is not INamedTypeSymbol namedType)
+        if (
+            context.TargetSymbol is not INamedTypeSymbol unionSymbol
+                || GetObjectType(unionSymbol) is not { } objectType
+                || context.Attributes is not [var attribute]
+                || unionSymbol.GetAccessibility() is not { } accessibility
+        )
         {
             return null;
         }
 
-        var unionName = GetTypeName(namedType);
+        var attributeInfo = GetAttributeInfo(attribute, cancellationToken);
 
-        if (!declaration.Modifiers.Any(modifier => modifier.IsKind(SyntaxKind.PartialKeyword)))
+        var memberInfos = unionSymbol.GetTypeMembers()
+            .Where(memberSymbol => SymbolEqualityComparer.Default.Equals(memberSymbol.ContainingType, unionSymbol))
+            .Select(GetMemberInfo)
+            .OfType<MemberInfo>()
+            .ToEquatableArray();
+
+        MemberInfo? GetMemberInfo(INamedTypeSymbol memberSymbol)
         {
-            var diagnostic = Diagnostic.Create(
-                Diagnostics.NotMarkedPartial,
-                declaration.Identifier.GetLocation(),
-                namedType.Name
-            );
+            cancellationToken.ThrowIfCancellationRequested();
 
-            return Failure(diagnostic);
-        }
-
-        var attributeData = context.Attributes.First();
-
-        var attributeSettings = GetAttributeSettings(attributeData, defaults);
-
-        var existingJsonDerivedTypes = namedType.GetAttributes()
-            .Where(data => data.AttributeClass?.ToDisplayString() == JsonDerivedTypeAttribute)
-            .Select(data =>
+            if (memberSymbol.GetAccessibility() is not { } accessibility)
             {
-                if (data.ConstructorArguments is not [var typeArgument, ..])
-                {
-                    return null;
-                }
+                return null;
+            }
 
-                if (typeArgument is not { Kind: TypedConstantKind.Type, Value: INamedTypeSymbol typeSymbol })
-                {
-                    return null;
-                }
-
-                return typeSymbol;
-            })
-            .OfType<INamedTypeSymbol>()
-            .ToArray();
-
-        var explicitConstructor = namedType.InstanceConstructors
-            .FirstOrDefault(constructor => !constructor.IsImplicitlyDeclared);
-        
-        if (attributeSettings.GeneratePrivateConstructor && explicitConstructor is { })
-        {
-            var diagnostic = Diagnostic.Create(
-                Diagnostics.ConstructorAlreadyExists,
-                explicitConstructor.Locations.First(),
-                namedType.Name
-            );
-
-            return Failure(diagnostic);
-        }
-
-        var members = namedType.GetTypeMembers()
-            .Where(typeMember => SymbolEqualityComparer.Default.Equals(typeMember.BaseType, unionSymbol))
-            .Select(unionMember => GetUnionMember(unionMember, existingJsonDerivedTypes))
-            .ToImmutableArray();
-
-        if (members is [])
-        {
-            var diagnostic = Diagnostic.Create(
-                Diagnostics.MissingDerivedTypes,
-                declaration.Identifier.GetLocation(),
-                unionSymbol.Name
-            );
-
-            return Failure(diagnostic);
+            return new(
+                memberSymbol.Name,
+                accessibility,
+                SymbolId.Create(memberSymbol),
+                memberSymbol.GetAttributes()
+                    .Select(attribute => attribute.AttributeClass)
+                    .Contains(constantSymbols.JsonDerivedTypeAttribute, SymbolEqualityComparer.Default)
+            )
+            {
+                DeconstructInfo = GetDeconstructInfo(memberSymbol)
+            };
         }
 
         return new(
-            Name: unionName,
-            Type: GetUnionType(namedType),
-            Namespace: unionSymbol.ContainingNamespace.ToDisplayString(),
-            AttributeSettings: attributeSettings,
-            Members: members,
-            AttributeLocation: attributeData.ApplicationSyntaxReference!
-                .GetSyntax()
-                .GetLocation()
+            unionSymbol.Name,
+            accessibility,
+            SymbolId.Create(unionSymbol),
+            unionSymbol.ContainingNamespace.ToDisplayString(),
+            objectType,
+            memberInfos,
+            attributeInfo
         );
     }
 
-    private static UnionMember GetUnionMember(INamedTypeSymbol member, IEnumerable<INamedTypeSymbol> existingJsonDerivedTypes)
+    private static DeconstructInfo? GetDeconstructInfo(INamedTypeSymbol memberSymbol, CancellationToken cancellationToken = default)
     {
-        var unionMember = new UnionMember(
-            Name: GetTypeName(member),
-            ShouldGenerateSerializerAttribute: 
-                !existingJsonDerivedTypes.Any(derivedType => SymbolEqualityComparer.Default.Equals(member, derivedType)),
-            MatchableProperties: [.. GetMatchableProperties(member)]
-        );
+        cancellationToken.ThrowIfCancellationRequested();
 
-        return unionMember;
+        var maybeDeconstructSymbol = memberSymbol.GetMembers()
+            .OfType<IMethodSymbol>()
+            .FirstOrDefault(methodSymbol => 
+                methodSymbol is { ReturnsVoid: true, Name: "Deconstruct", IsGenericMethod: false }
+            );
+
+        if (maybeDeconstructSymbol is not { } deconstructSymbol || memberSymbol.GetAccessibility() is not { } accessibility)
+        {
+            return null;
+        }
+
+        var parameters = deconstructSymbol.Parameters
+            .Select(parameter =>
+                new ParameterInfo(parameter.Name, SymbolId.Create(parameter))
+            )
+            .ToEquatableArray();
+
+        return new(parameters, accessibility);
     }
 
-    private static IEnumerable<MatchableProperty> GetMatchableProperties(INamedTypeSymbol member) => member.GetMembers()
-        .OfType<IPropertySymbol>()
-        .Where(property => property.GetMethod?.DeclaredAccessibility is Accessibility.Public)
-        .Select(property => new MatchableProperty(
-            Name: property.Name,
-            Type: GetTypeName(property.Type)
-        ));
+    #endregion
 
-    private static UnionType GetUnionType(INamedTypeSymbol type) => type.IsRecord switch
+    #region Helper Methods
+
+    private static ConstantSymbols GetConstantSymbols(Compilation compilation, CancellationToken cancellationToken = default)
     {
-        true => UnionType.Record,
-        false => UnionType.Class
-    };
+        cancellationToken.ThrowIfCancellationRequested();
 
-    private static TypeName GetTypeName(ITypeSymbol type)
-    {
-        var plainFormat = new SymbolDisplayFormat(
-            genericsOptions: SymbolDisplayGenericsOptions.None,
-            typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameOnly
-        );
+        if (compilation.GetTypeByMetadataName(DiscriminatedUnionDefaults.AttributeName) is not INamedTypeSymbol unionAttribute)
+        {
+            var types = compilation.GetTypesByMetadataName(DiscriminatedUnionDefaults.AttributeName);
 
-        var qualifiedFormat = new SymbolDisplayFormat(
-            genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters,
-            typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypes
-        );
+            throw new InvalidOperationException($"The symbol for {nameof(DiscriminatedUnionAttribute)} could not be loaded.");
+        }
 
-        return new(
-            type.ToDisplayString(plainFormat),
-            type.ToDisplayString(qualifiedFormat)
-        );
+        var jsonDerivedTypeAttribute = compilation
+            .GetTypeByMetadataName(JsonDerivedTypeAttribute);
+
+        return new(unionAttribute)
+        {
+            JsonDerivedTypeAttribute = jsonDerivedTypeAttribute
+        };
     }
 
-    private static AttributeSettings GetAttributeSettings(AttributeData attribute, AttributeSettings defaults)
+    private static AttributeInfo GetAttributeInfo(AttributeData attribute, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var unionArguments = attribute.NamedArguments
             .ToImmutableDictionary(
                 argument => argument.Key, 
-                argument => (TypedConstant?)argument.Value
+                TypedConstant? (argument) => argument.Value
             );
 
-        return new(
-            MatchOn: (MatchUnionOn)(unionArguments
-                ?.GetValueOrDefault(nameof(DiscriminatedUnionAttribute.MatchOn))
-                ?.Value
-                ?? defaults.MatchOn),
-            GeneratePolymorphicSerialization: unionArguments
-                ?.GetValueOrDefault(nameof(DiscriminatedUnionAttribute.GeneratePolymorphicSerialization))
+        return new()
+        {
+            MatchOn = unionArguments.GetValueOrDefault(nameof(DiscriminatedUnionAttribute.MatchOn))
+                ?.Value as MatchUnionOn?,
+            GeneratePolymorphicSerialization = unionArguments.GetValueOrDefault(nameof(DiscriminatedUnionAttribute.GeneratePolymorphicSerialization))
+                ?.Value as bool?,
+            GeneratePrivateConstructor = unionArguments.GetValueOrDefault(nameof(DiscriminatedUnionAttribute.GeneratePrivateConstructor))
                 ?.Value as bool?
-                ?? defaults.GeneratePolymorphicSerialization,
-            GeneratePrivateConstructor: unionArguments
-                ?.GetValueOrDefault(nameof(DiscriminatedUnionAttribute.GeneratePrivateConstructor))
-                ?.Value as bool?
-                ?? defaults.GeneratePrivateConstructor
-        );
+        };
     }
 
-    private static AttributeSettings GetDefaultAttributeSettings(AnalyzerConfigOptions options)
+    private static ObjectType? GetObjectType(ITypeSymbol typeSymbol) => typeSymbol switch
     {
-        options.TryGetValue("build_property.FunctionalEngine_Defaults_MatchOn", out string? match);
-        options.TryGetValue("build_property.FunctionalEngine_Defaults_GeneratePolymorphicSerialization", out string? polymorphicSerialization);
-        options.TryGetValue("build_property.FunctionalEngine_Defaults_GeneratePrivateConstructor", out string? privateConstructor);
+        { IsRecord: false, TypeKind: TypeKind.Class } => ObjectType.Class,
+        { IsRecord: true, TypeKind: TypeKind.Class } => ObjectType.Record,
+        _ => null
+    };
 
-        return new AttributeSettings(
-            MatchOn: TryParseEnum<MatchUnionOn>(match) ?? DiscriminatedUnionDefaults.MatchOn,
-            GeneratePolymorphicSerialization: TryParseBool(polymorphicSerialization) ?? DiscriminatedUnionDefaults.GeneratePolymorphicSerialization,
-            GeneratePrivateConstructor: TryParseBool(privateConstructor) ?? DiscriminatedUnionDefaults.GeneratePrivateConstructor
+    private static AttributeInfo GetDefaultAttributeInfo(AnalyzerConfigOptions options, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        
+        options.TryGetValue(
+            $"build_property.FunctionalEngine_Defaults_{nameof(DiscriminatedUnionAttribute.MatchOn)}", 
+            out string? match
         );
+
+        options.TryGetValue(
+            $"build_property.FunctionalEngine_Defaults_{nameof(DiscriminatedUnionAttribute.GeneratePolymorphicSerialization)}", 
+            out string? polymorphicSerialization
+        );
+
+        options.TryGetValue(
+            $"build_property.FunctionalEngine_Defaults_{nameof(DiscriminatedUnionAttribute.GeneratePrivateConstructor)}", 
+            out string? privateConstructor
+        );
+
+        return new()
+        {
+            MatchOn = TryParseEnum<MatchUnionOn>(match),
+            GeneratePolymorphicSerialization = TryParseBool(polymorphicSerialization),
+            GeneratePrivateConstructor = TryParseBool(privateConstructor)
+        };
 
         static bool? TryParseBool(string? text)
         {
@@ -354,39 +281,306 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
         }
     }
 
-    private static UnionDefinition Failure(Diagnostic diagnostic) => new() { Failure = diagnostic };
+    #endregion
 
-    private readonly record struct CompilationInfo(
-        bool SerializationAttributesExist
-    );
+    #region Model Creation
 
-    private readonly record struct ParseInfo(
-        LanguageVersion LanguageVersion,
-        bool SwitchExpressionsSupported
-    );
-
-    private readonly record struct UnionDefinition(
-        TypeName Name,
-        UnionType Type,
-        string Namespace,
-        AttributeSettings AttributeSettings,
-        EquatableArray<UnionMember> Members,
-        Location AttributeLocation
+    private static UnionRenderModel? CreateUnionModel(
+        UnionInfo unionInfo,
+        Compilation compilation,
+        AttributeInfo projectAttributeDefaults,
+        ConstantSymbols constantSymbols,
+        CancellationToken cancellationToken = default
     )
     {
-        public Diagnostic? Failure { get; init; }
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var attributeSettings = unionInfo.AttributeInfo.Or(projectAttributeDefaults)
+            .ToSettings();
+
+        var context = new RenderContext(compilation, constantSymbols, attributeSettings);
+
+        return CreateUnionModel(unionInfo, context, cancellationToken);
     }
 
-    private readonly record struct UnionMember(
-        TypeName Name,
-        bool ShouldGenerateSerializerAttribute,
-        ImmutableArray<MatchableProperty> MatchableProperties
+    private static UnionRenderModel? CreateUnionModel(
+        UnionInfo unionInfo,
+        RenderContext context,
+        CancellationToken cancellationToken = default
+    )
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var memberContexts = unionInfo.MemberInfos
+            .Select(CreateMemberContext)
+            .ToImmutableArray();
+
+        MemberRenderContext CreateMemberContext(MemberInfo memberInfo)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var memberContext = new MemberRenderContext(
+                memberInfo.Name,
+                memberInfo.Accessibility,
+                memberInfo.Type.RenderType(context.Compilation, DisplayFormat.Qualified),
+                memberInfo.HasDerivedTypeAttribute
+            )
+            {
+                DeconstructInfo = memberInfo.DeconstructInfo
+            };
+
+            return memberContext;
+        }
+
+        return new(
+            unionInfo.Name,
+            unionInfo.Accessibility,
+            unionInfo.Type.RenderType(context.Compilation, DisplayFormat.Unqualified),
+            unionInfo.Namespace,
+            unionInfo.ObjectType,
+            context.Settings.GeneratePrivateConstructor
+        )
+        {
+            MatchModel = CreateMatchModel(memberContexts, context, cancellationToken),
+            PolymorphicAttributes = CreatePolymorphicAttributes(memberContexts, context, cancellationToken)
+                .ToEquatableArray()
+        };
+    }
+
+    private static EquatableArray<MatchRenderModel> CreateMatchModel(
+        IEnumerable<MemberRenderContext> memberContexts, 
+        RenderContext context,
+        CancellationToken cancellationToken = default
+    )
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var matchOn = context.Settings.MatchOn;
+
+        if (matchOn is MatchUnionOn.Properties)
+        {
+            return CreatePropertiesMatchModel(memberContexts, context, cancellationToken);
+        }
+
+        if (matchOn is MatchUnionOn.Type)
+        {
+            return CreateTypeMatchModel(memberContexts, cancellationToken);
+        }
+
+        return [];
+    }
+
+    private static EquatableArray<MatchRenderModel> CreateTypeMatchModel(
+        IEnumerable<MemberRenderContext> memberContexts,
+        CancellationToken cancellationToken = default
+    )
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return memberContexts.Select(CreateMatchModel).ToEquatableArray();
+
+        MatchRenderModel CreateMatchModel(MemberRenderContext memberContext)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            return new(
+                memberContext.Name,
+                RenderParameter(memberContext),
+                RenderArm(memberContext)
+            );
+        }
+
+        string RenderParameter(MemberRenderContext memberContext)
+        {
+            var parameterName = $"on{memberContext.Name}";
+
+            var funcType = $"{Func}<{memberContext.Type}, TResult>";
+
+            return $"{funcType} {parameterName}";
+        }
+
+        string RenderArm(MemberRenderContext memberContext)
+        {
+            var typeName = memberContext.Name.ToCamelCase();
+
+            var pattern = $"{memberContext.Type} {typeName} => on{memberContext.Name}({typeName})";
+
+            return pattern;
+        }
+    }
+
+    private static EquatableArray<MatchRenderModel> CreatePropertiesMatchModel(
+        IEnumerable<MemberRenderContext> memberContexts,
+        RenderContext context,
+        CancellationToken cancellationToken = default
+    )
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return memberContexts.SelectAll(CreateMatchModel) ?? [];
+
+        MatchRenderModel? CreateMatchModel(MemberRenderContext memberContext)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (memberContext.DeconstructInfo is not { } deconstructInfo)
+            {
+                return null;
+            }
+
+            return new(
+                memberContext.Name,
+                RenderParameter(memberContext, deconstructInfo),
+                RenderArm(memberContext, deconstructInfo)
+            );
+        }
+
+        string RenderParameter(MemberRenderContext memberContext, DeconstructInfo deconstructInfo)
+        {
+            var renderedTypes = deconstructInfo.Parameters
+                .Select(parameter => parameter.Type.Resolve(context.Compilation))
+                .Select(parameterSymbol => parameterSymbol.Type.ToDisplayString(DisplayFormat.Qualified));
+
+            var parameterName = $"on{memberContext.Name}";
+
+            var funcType = $"{Func}<{string.Join(", ", renderedTypes)}, TResult>";
+
+            return $"{funcType} {parameterName}";
+        }
+
+        string RenderArm(MemberRenderContext memberContext, DeconstructInfo deconstructInfo)
+        {
+            var parameterNames = deconstructInfo.Parameters.Select(parameter => parameter.Name.ToCamelCase());
+
+            var invocationParameters = string.Join(
+                ", ",
+                parameterNames
+            );
+
+            var patternParameters = string.Join(", ", parameterNames.Select(name => $"var {name}"));
+
+            var pattern = invocationParameters switch
+            {
+                "" => memberContext.Type,
+                _ => $"{memberContext.Type}({patternParameters})"
+            };
+
+            return $"{pattern} => on{memberContext.Name}({invocationParameters})";
+        }
+    }
+
+    private static IEnumerable<string> CreatePolymorphicAttributes(
+        IEnumerable<MemberRenderContext> memberContexts,
+        RenderContext context,
+        CancellationToken cancellationToken = default
+    )
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (
+            !context.Settings.GeneratePolymorphicSerialization 
+                || context.Symbols.JsonDerivedTypeAttribute is not { }derivedTypeAttributeSymbol
+        )
+        {
+            return [];
+        }
+
+        return memberContexts.Where(memberContext => !memberContext.HasDerivedTypeAttribute)
+            .Select(memberContext => $"[{JsonDerivedTypeAttribute}(typeof({memberContext.Type}))]");
+    }
+
+    #endregion
+
+    #region Code Rendering
+
+    private static class DisplayFormat
+    {
+        public static SymbolDisplayFormat Qualified { get; } = 
+            new(
+                typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces,
+                genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters
+            );
+
+        public static SymbolDisplayFormat Unqualified { get; } =
+            new(
+                typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameOnly,
+                genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters
+            );
+    }
+
+    #endregion
+
+    #region Data Models
+
+    private readonly record struct UnionInfo(
+        string Name,
+        Accessibility Accessibility,
+        SymbolId<INamedTypeSymbol> Type,
+        string Namespace,
+        ObjectType ObjectType,
+        EquatableArray<MemberInfo> MemberInfos,
+        AttributeInfo AttributeInfo
     );
 
-    private enum UnionType
+    private readonly record struct MemberInfo(
+        string Name,
+        Accessibility Accessibility,
+        SymbolId<INamedTypeSymbol> Type,
+        bool HasDerivedTypeAttribute
+    )
     {
-        Class,
-        Record
+        public DeconstructInfo? DeconstructInfo { get; init; }
+    }
+
+    private readonly record struct DeconstructInfo(
+        EquatableArray<ParameterInfo> Parameters,
+        Accessibility Accessibility
+    );
+
+    private readonly record struct ParameterInfo(
+        string Name,
+        SymbolId<IParameterSymbol> Type
+    );
+
+    private readonly record struct RenderContext(
+        Compilation Compilation, 
+        ConstantSymbols Symbols, 
+        AttributeSettings Settings
+    );
+
+    private readonly record struct MemberRenderContext(
+        string Name,
+        Accessibility Accessibility,
+        string Type,
+        bool HasDerivedTypeAttribute
+    )
+    {
+        public DeconstructInfo? DeconstructInfo { get; init; }
+    }
+
+    private readonly record struct UnionRenderModel(
+        string Name,
+        Accessibility Accessibility,
+        string Type,
+        string Namespace,
+        ObjectType ObjectType,
+        bool GeneratePrivateConstructor
+    )
+    {
+        public EquatableArray<MatchRenderModel> MatchModel { get; init; } = [];
+
+        public EquatableArray<string> PolymorphicAttributes { get; init; } = [];
+    }
+
+    private readonly record struct MatchRenderModel(
+        string MemberName,
+        string Parameter,
+        string MatchArm
+    );
+
+    private readonly record struct ConstantSymbols(INamedTypeSymbol UnionAttribute)
+    {
+        public INamedTypeSymbol? JsonDerivedTypeAttribute { get; init; }
     }
 
     private readonly record struct AttributeSettings(
@@ -395,13 +589,100 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
         bool GeneratePrivateConstructor
     );
 
-    private readonly record struct MatchableProperty(
-        string Name,
-        TypeName Type
-    );
+    private readonly record struct AttributeInfo
+    {
+        public MatchUnionOn? MatchOn { get; init; }
 
-    private readonly record struct TypeName(
-        string Plain,
-        string WithGenerics
-    );
+        public bool? GeneratePolymorphicSerialization { get; init; }
+
+        public bool? GeneratePrivateConstructor { get; init; }
+
+        public AttributeInfo Or(AttributeInfo other) =>
+            this with
+            {
+                MatchOn = MatchOn ?? other.MatchOn,
+                GeneratePolymorphicSerialization = GeneratePolymorphicSerialization ?? other.GeneratePolymorphicSerialization,
+                GeneratePrivateConstructor = GeneratePrivateConstructor ?? other.GeneratePrivateConstructor
+            };
+
+        public AttributeSettings ToSettings() =>
+            new(
+                MatchOn ?? DiscriminatedUnionDefaults.Instance.MatchOn,
+                GeneratePolymorphicSerialization ?? DiscriminatedUnionDefaults.Instance.GeneratePolymorphicSerialization,
+                GeneratePrivateConstructor ?? DiscriminatedUnionDefaults.Instance.GeneratePrivateConstructor
+            );
+    }
+
+    private readonly record struct SymbolId<TSymbol>(string Id, SymbolIdType Type) where TSymbol : class, ISymbol
+    {
+        public string? ForeignId { get; init; }
+
+        public TSymbol Resolve(Compilation compilation)
+        {
+            if (
+                ForeignId is { } foreignId 
+                    && typeof(TSymbol) == typeof(IParameterSymbol)
+                    && GetSymbolInternal<IMethodSymbol>(Id, Type, compilation) is { } methodSymbol
+            )
+            {
+                return methodSymbol.Parameters.FirstOrDefault(parameter => parameter.Name == foreignId) as TSymbol
+                    ?? throw new InvalidOperationException("Symbol could not be resolved");
+            }
+
+            return GetSymbolInternal<TSymbol>(Id, Type, compilation)
+                ?? throw new InvalidOperationException("Symbol could not be resolved");
+        }
+
+        public string RenderType(Compilation compilation, SymbolDisplayFormat? format = null) =>
+            Resolve(compilation).ToDisplayString(format);
+
+        private static TInternalSymbol? GetSymbolInternal<TInternalSymbol>(
+            string id,
+            SymbolIdType type,
+            Compilation compilation
+        )
+            where TInternalSymbol : class, ISymbol
+        =>
+            type switch
+            {
+                SymbolIdType.Declaration => DocumentationCommentId.GetFirstSymbolForDeclarationId(id, compilation) as TInternalSymbol,
+                _ => DocumentationCommentId.GetFirstSymbolForReferenceId(id, compilation) as TInternalSymbol
+            };
+    }
+
+    private static class SymbolId
+    {
+        public static SymbolId<TSymbol> Create<TSymbol>(TSymbol symbol) where TSymbol : class, ISymbol
+        {
+            var symbolId = DocumentationCommentId.CreateReferenceId(symbol);
+
+            if (
+                symbolId is "" 
+                    && symbol is IParameterSymbol { ContainingSymbol: IMethodSymbol methodSymbol } parameterSymbol
+                    && DocumentationCommentId.CreateDeclarationId(methodSymbol) is { } methodSymbolId
+            )
+            {
+                return new(methodSymbolId, SymbolIdType.Declaration)
+                {
+                    ForeignId = parameterSymbol.Name
+                };
+            }
+
+            return new(symbolId, SymbolIdType.Reference);
+        }
+    }
+
+    private enum ObjectType
+    {
+        Class,
+        Record
+    }
+
+    private enum SymbolIdType
+    {
+        Reference,
+        Declaration
+    }
+
+    #endregion
 }

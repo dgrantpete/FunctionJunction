@@ -1,6 +1,4 @@
-﻿using FunctionalEngine.Async;
-using FunctionalEngine.Extensions;
-using FunctionalEngine.Generator;
+﻿using FunctionalEngine.Generator;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using static FunctionalEngine.Prelude;
@@ -685,7 +683,7 @@ public static class Result
 
     /// <summary>
     /// Combines a sequence of <see cref="Result{TOk, TError}"/> values into a single <see cref="Result{TOk, TError}"/> containing a list of all success values.
-    /// If all results are successful, returns <c>Ok</c> containing an <see cref="IImmutableList{T}"/> of all success values in order.
+    /// If all results are successful, returns <c>Ok</c> containing an <see cref="ImmutableArray{T}"/> of all success values in order.
     /// If any result is an error, returns the first encountered error and stops processing remaining results.
     /// This operation is "all-or-nothing" - either all succeed or the operation fails.
     /// </summary>
@@ -693,61 +691,89 @@ public static class Result
     /// <typeparam name="TError">The type of the error values.</typeparam>
     /// <param name="results">The sequence of <see cref="Result{TOk, TError}"/> values to combine.</param>
     /// <returns>A <see cref="Result{TOk, TError}"/> containing either all success values as a list, or the first error encountered.</returns>
-    public static Result<IImmutableList<TOk>, TError> All<TOk, TError>(IEnumerable<Result<TOk, TError>> results) =>
-        results
-            .Scan(
-                Ok<IImmutableList<TOk>, TError>([]),
-                (previousResults, result) =>
-                    previousResults.And(() => result)
-                        .MapTuple((previousOks, ok) => previousOks.Add(ok))
-            )
-            .TakeWhileInclusive(result => result.IsOk)
-            .Last();
+    public static Result<ImmutableArray<TOk>, TError> All<TOk, TError>(IEnumerable<Result<TOk, TError>> results)
+    {
+        var okValues = ImmutableArray.CreateBuilder<TOk>();
+
+        foreach (var result in results)
+        {
+            if (result.TryUnwrapError(out var error))
+            {
+                return error;
+            }
+
+            result.Tap(okValues.Add);
+        }
+
+        return okValues.DrainToImmutable();
+    }
 
     /// <summary>
     /// Combines a sequence of <see cref="Result{TOk, TError}"/> providers into a single <see cref="Result{TOk, TError}"/> containing a list of all success values.
     /// Each provider function is called lazily only if the previous results were successful.
-    /// If all providers produce successful results, returns <c>Ok</c> containing an <see cref="IImmutableList{T}"/> of all success values in order.
+    /// If all providers produce successful results, returns <c>Ok</c> containing an <see cref="ImmutableArray{T}"/> of all success values in order.
     /// If any provider produces an error, returns that error and stops calling remaining providers.
     /// </summary>
     /// <typeparam name="TOk">The type of the success values.</typeparam>
     /// <typeparam name="TError">The type of the error values.</typeparam>
     /// <param name="resultProviders">The sequence of functions that provide <see cref="Result{TOk, TError}"/> values.</param>
     /// <returns>A <see cref="Result{TOk, TError}"/> containing either all success values as a list, or the first error encountered.</returns>
-    public static Result<IImmutableList<TOk>, TError> All<TOk, TError>(params IEnumerable<Func<Result<TOk, TError>>> resultProviders) =>
+    public static Result<ImmutableArray<TOk>, TError> All<TOk, TError>(params IEnumerable<Func<Result<TOk, TError>>> resultProviders) =>
         All(resultProviders.Select(resultProvider => resultProvider()));
 
     /// <summary>
     /// Attempts to find the first successful result from a sequence of <see cref="Result{TOk, TError}"/> values.
     /// If any result is successful, returns the first success value found.
-    /// If all results are errors, returns an <c>Error</c> containing an <see cref="IImmutableList{T}"/> of all error values in order.
+    /// If all results are errors, returns an <c>Error</c> containing an <see cref="ImmutableArray{T}"/> of all error values in order.
     /// This operation succeeds as soon as any individual result succeeds, providing "first-success" semantics.
     /// </summary>
     /// <typeparam name="TOk">The type of the success values.</typeparam>
     /// <typeparam name="TError">The type of the error values.</typeparam>
     /// <param name="results">The sequence of <see cref="Result{TOk, TError}"/> values to evaluate.</param>
     /// <returns>A <see cref="Result{TOk, TError}"/> containing either the first success value, or all error values as a list.</returns>
-    public static Result<TOk, IImmutableList<TError>> Any<TOk, TError>(IEnumerable<Result<TOk, TError>> results) =>
-        results
-            .Scan(
-                Error<TOk, IImmutableList<TError>>([]),
-                (previousResults, result) =>
-                    previousResults.Or(() => result)
-                        .MapErrorTuple((previousErrors, error) => previousErrors.Add(error))
-            )
-            .TakeWhileInclusive(result => result.IsError)
-            .Last();
+    public static Result<TOk, ImmutableArray<TError>> Any<TOk, TError>(IEnumerable<Result<TOk, TError>> results)
+    {
+        var errors = ImmutableArray.CreateBuilder<TError>();
+
+        foreach (var result in results)
+        {
+            if (result.TryUnwrap(out var okValue))
+            {
+                return okValue;
+            }
+
+            result.TapError(errors.Add);
+        }
+
+        return errors.DrainToImmutable();
+    }
 
     /// <summary>
     /// Attempts to find the first successful result from a sequence of <see cref="Result{TOk, TError}"/> providers.
     /// Each provider function is called lazily until one produces a successful result.
     /// If any provider produces a successful result, returns that success value and stops calling remaining providers.
-    /// If all providers produce errors, returns an <c>Error</c> containing an <see cref="IImmutableList{T}"/> of all error values in order.
+    /// If all providers produce errors, returns an <c>Error</c> containing an <see cref="ImmutableArray{T}"/> of all error values in order.
     /// </summary>
     /// <typeparam name="TOk">The type of the success values.</typeparam>
     /// <typeparam name="TError">The type of the error values.</typeparam>
     /// <param name="resultProviders">The sequence of functions that provide <see cref="Result{TOk, TError}"/> values.</param>
     /// <returns>A <see cref="Result{TOk, TError}"/> containing either the first success value, or all error values as a list.</returns>
-    public static Result<TOk, IImmutableList<TError>> Any<TOk, TError>(params IEnumerable<Func<Result<TOk, TError>>> resultProviders) =>
-        Any(resultProviders.Select(resultProvider => resultProvider()));
+    public static Result<TOk, ImmutableArray<TError>> Any<TOk, TError>(params IEnumerable<Func<Result<TOk, TError>>> resultProviders)
+    {
+        var errorValues = ImmutableArray.CreateBuilder<TError>();
+
+        foreach (var resultProvider in resultProviders)
+        {
+            var result = resultProvider();
+
+            if (result.TryUnwrap(out var okValue))
+            {
+                return okValue;
+            }
+
+            result.TapError(errorValues.Add);
+        }
+
+        return errorValues.DrainToImmutable();
+    }
 }

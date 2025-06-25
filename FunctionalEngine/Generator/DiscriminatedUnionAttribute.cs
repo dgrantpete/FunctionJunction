@@ -1,6 +1,10 @@
 ﻿using System;
 
+#if MAIN_PROJECT
 namespace FunctionalEngine.Generator;
+#else
+namespace FunctionalEngine.Generator.Internal.Attributes;
+#endif
 
 /// <summary>
 /// An attribute used on classes to opt-in to discriminated union code generation.

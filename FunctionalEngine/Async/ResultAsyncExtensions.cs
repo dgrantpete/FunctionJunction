@@ -1,7 +1,5 @@
 ﻿using System.Collections.Immutable;
-using static FunctionalEngine.Result;
 using static FunctionalEngine.Prelude;
-using FunctionalEngine.Extensions;
 
 namespace FunctionalEngine.Async;
 
@@ -82,16 +80,22 @@ public static partial class ResultAsyncExtensions
     /// <typeparam name="TError">The type of the error values.</typeparam>
     /// <param name="results">The async sequence of results to combine.</param>
     /// <returns>A <see cref="Task{T}"/> containing either <c>Ok</c> with all success values, or the first error encountered.</returns>
-    public static async Task<Result<IImmutableList<TOk>, TError>> All<TOk, TError>(IAsyncEnumerable<Result<TOk, TError>> results) =>
-        await results
-            .Scan(
-                Ok<IImmutableList<TOk>, TError>([]),
-                (previousResults, result) =>
-                    previousResults.And(() => result)
-                        .MapTuple((previousOks, ok) => previousOks.Add(ok))
-            )
-            .TakeWhileInclusive(result => result.IsOk)
-            .LastAsync();
+    public static async Task<Result<ImmutableArray<TOk>, TError>> All<TOk, TError>(IAsyncEnumerable<Result<TOk, TError>> results)
+    {
+        var okValues = ImmutableArray.CreateBuilder<TOk>();
+
+        await foreach (var result in results)
+        {
+            if (result.TryUnwrapError(out var error))
+            {
+                return error;
+            }
+
+            result.Tap(okValues.Add);
+        }
+
+        return okValues.DrainToImmutable();
+    }
 
     /// <summary>
     /// Asynchronously combines results from a collection of async result providers into a single result containing a list of all success values.
@@ -102,11 +106,24 @@ public static partial class ResultAsyncExtensions
     /// <typeparam name="TError">The type of the error values.</typeparam>
     /// <param name="resultProvidersAsync">The collection of async functions that provide results when executed.</param>
     /// <returns>A <see cref="Task{T}"/> containing either <c>Ok</c> with all success values, or the first error encountered.</returns>
-    public static Task<Result<IImmutableList<TOk>, TError>> All<TOk, TError>(params IEnumerable<Func<Task<Result<TOk, TError>>>> resultProvidersAsync) =>
-        All(
-            resultProvidersAsync.ToAsyncEnumerable()
-                .Select(async (Func<Task<Result<TOk, TError>>> resultProvider, CancellationToken _) => await resultProvider())
-        );
+    public static async Task<Result<ImmutableArray<TOk>, TError>> All<TOk, TError>(params IEnumerable<Func<Task<Result<TOk, TError>>>> resultProvidersAsync)
+    {
+        var okValues = ImmutableArray.CreateBuilder<TOk>();
+
+        foreach (var resultProviderAsync in resultProvidersAsync)
+        {
+            var result = await resultProviderAsync();
+
+            if (result.TryUnwrapError(out var error))
+            {
+                return error;
+            }
+
+            result.Tap(okValues.Add);
+        }
+
+        return okValues.DrainToImmutable();
+    }
 
     /// <summary>
     /// Asynchronously finds the first successful result from a sequence of <see cref="Result{TOk, TError}"/> values.
@@ -117,16 +134,22 @@ public static partial class ResultAsyncExtensions
     /// <typeparam name="TError">The type of the error values.</typeparam>
     /// <param name="results">The async sequence of results to search.</param>
     /// <returns>A <see cref="Task{T}"/> containing either the first success value, or all error values if none succeed.</returns>
-    public static async Task<Result<TOk, IImmutableList<TError>>> Any<TOk, TError>(IAsyncEnumerable<Result<TOk, TError>> results) =>
-        await results
-            .Scan(
-                Error<TOk, IImmutableList<TError>>([]),
-                (previousResults, result) =>
-                    previousResults.Or(() => result)
-                        .MapErrorTuple((previousErrors, error) => previousErrors.Add(error))
-            )
-            .TakeWhileInclusive(result => result.IsError)
-            .LastAsync();
+    public static async Task<Result<TOk, ImmutableArray<TError>>> Any<TOk, TError>(IAsyncEnumerable<Result<TOk, TError>> results)
+    {
+        var errors = ImmutableArray.CreateBuilder<TError>();
+
+        await foreach (var result in results)
+        {
+            if (result.TryUnwrap(out var okValue))
+            {
+                return okValue;
+            }
+
+            result.TapError(errors.Add);
+        }
+
+        return errors.DrainToImmutable();
+    }
 
     /// <summary>
     /// Asynchronously finds the first successful result from a collection of async result providers.
@@ -137,9 +160,22 @@ public static partial class ResultAsyncExtensions
     /// <typeparam name="TError">The type of the error values.</typeparam>
     /// <param name="resultProvidersAsync">The collection of async functions that provide results when executed.</param>
     /// <returns>A <see cref="Task{T}"/> containing either the first success value, or all error values if none succeed.</returns>
-    public static Task<Result<TOk, IImmutableList<TError>>> Any<TOk, TError>(params IEnumerable<Func<Task<Result<TOk, TError>>>> resultProvidersAsync) =>
-        Any(
-            resultProvidersAsync.ToAsyncEnumerable()
-                .Select(async (Func<Task<Result<TOk, TError>>> resultProvider, CancellationToken _) => await resultProvider())
-        );
+    public static async Task<Result<TOk, ImmutableArray<TError>>> Any<TOk, TError>(params IEnumerable<Func<Task<Result<TOk, TError>>>> resultProvidersAsync)
+    {
+        var errors = ImmutableArray.CreateBuilder<TError>();
+
+        foreach (var resultProviderAsync in resultProvidersAsync)
+        {
+            var result = await resultProviderAsync();
+
+            if (result.TryUnwrap(out var ok))
+            {
+                return ok;
+            }
+
+            result.TapError(errors.Add);
+        }
+
+        return errors.DrainToImmutable();
+    }
 }

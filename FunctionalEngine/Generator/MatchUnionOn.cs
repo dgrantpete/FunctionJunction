@@ -1,4 +1,8 @@
-﻿namespace FunctionalEngine.Generator;
+﻿#if MAIN_PROJECT
+namespace FunctionalEngine.Generator;
+#else
+namespace FunctionalEngine.Generator.Internal.Attributes;
+#endif
 
 /// <summary>
 /// Specifies how a <c>Match</c> function should be generated.

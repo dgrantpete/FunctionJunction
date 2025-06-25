@@ -1,6 +1,4 @@
-﻿using FunctionalEngine.Extensions;
-using System.Collections.Immutable;
-using static FunctionalEngine.Option;
+﻿using System.Collections.Immutable;
 using static FunctionalEngine.Prelude;
 
 namespace FunctionalEngine.Async;
@@ -24,24 +22,6 @@ public static partial class OptionAsyncExtensions
         option.Map(Identity);
 
     /// <summary>
-    /// Converts a <see cref="Task{T}"/> containing an <see cref="Option{T}"/> into an <see cref="IAsyncEnumerable{T}"/>.
-    /// If the task's <see cref="Option{T}"/> is <c>Some</c>, yields the single value. If <c>None</c>, yields nothing.
-    /// Useful for integrating async options into async enumerable processing pipelines.
-    /// </summary>
-    /// <typeparam name="T">The type of the value inside the option. Must be non-null.</typeparam>
-    /// <param name="optionTask">The task containing an option to convert.</param>
-    /// <returns>An <see cref="IAsyncEnumerable{T}"/> that yields the option's value if present, or nothing if absent.</returns>
-    public static async IAsyncEnumerable<T> ToAsyncEnumerable<T>(this Task<Option<T>> optionTask) where T : notnull
-    {
-        var option = await optionTask;
-
-        if (option.TryUnwrap(out var value))
-        {
-            yield return value;
-        }
-    }
-
-    /// <summary>
     /// Asynchronously combines a sequence of <see cref="Option{T}"/> values into a single <see cref="Option{T}"/> containing a list of all values.
     /// If all <see cref="Option{T}"/> values are <c>Some</c>, returns <c>Some</c> containing all values. If any <see cref="Option{T}"/> is <c>None</c>, returns <c>None</c>.
     /// This provides "all-or-nothing" semantics for async option collections.
@@ -49,15 +29,24 @@ public static partial class OptionAsyncExtensions
     /// <typeparam name="T">The type of values in the options. Must be non-null.</typeparam>
     /// <param name="options">The async sequence of options to combine.</param>
     /// <returns>A <see cref="Task{T}"/> containing either <c>Some</c> with all values, or <c>None</c> if any option was <c>None</c>.</returns>
-    public static async Task<Option<IImmutableList<T>>> All<T>(IAsyncEnumerable<Option<T>> options) where T : notnull =>
-        await options
-            .Scan(
-                Some<IImmutableList<T>>([]),
-                (previousOptions, option) => previousOptions.And(() => option)
-                    .MapTuple((previousValues, value) => previousValues.Add(value))
-            )
-            .TakeWhileInclusive(option => option.IsSome)
-            .LastAsync();
+    public static async Task<Option<ImmutableArray<T>>> All<T>(IAsyncEnumerable<Option<T>> options) where T : notnull
+    {
+        var values = ImmutableArray.CreateBuilder<T>();
+
+        await foreach (var option in options)
+        {
+            if (option.TryUnwrap(out var value))
+            {
+                values.Add(value);
+            }
+            else
+            {
+                return default;
+            }
+        }
+
+        return values.DrainToImmutable();
+    }
 
     /// <summary>
     /// Asynchronously combines options from a collection of async option providers into a single option containing a list of all values.
@@ -67,11 +56,26 @@ public static partial class OptionAsyncExtensions
     /// <typeparam name="T">The type of values in the options. Must be non-null.</typeparam>
     /// <param name="optionProvidersAsync">The collection of async functions that provide options when executed.</param>
     /// <returns>A <see cref="Task{T}"/> containing either <c>Some</c> with all values, or <c>None</c> if any option was <c>None</c>.</returns>
-    public static Task<Option<IImmutableList<T>>> All<T>(params IEnumerable<Func<Task<Option<T>>>> optionProvidersAsync) where T : notnull =>
-        All(
-            optionProvidersAsync.ToAsyncEnumerable()
-                .Select(async (Func<Task<Option<T>>> optionProvider, CancellationToken _) => await optionProvider())
-        );
+    public static async Task<Option<ImmutableArray<T>>> All<T>(params IEnumerable<Func<Task<Option<T>>>> optionProvidersAsync) where T : notnull
+    {
+        var values = ImmutableArray.CreateBuilder<T>();
+
+        foreach (var optionProviderAsync in optionProvidersAsync)
+        {
+            var option = await optionProviderAsync();
+
+            if (option.TryUnwrap(out var value))
+            {
+                values.Add(value);
+            }
+            else
+            {
+                return default;
+            }
+        }
+
+        return values.DrainToImmutable();
+    }
      
     /// <summary>
     /// Asynchronously finds the first <c>Some</c> value from a sequence of <see cref="Option{T}"/> values.
@@ -91,9 +95,18 @@ public static partial class OptionAsyncExtensions
     /// <typeparam name="T">The type of values in the options. Must be non-null.</typeparam>
     /// <param name="optionProvidersAsync">The collection of async functions that provide options when executed.</param>
     /// <returns>A <see cref="Task{T}"/> containing the first <c>Some</c> value found, or <c>None</c> if none exist.</returns>
-    public static Task<Option<T>> Any<T>(params IEnumerable<Func<Task<Option<T>>>> optionProvidersAsync) where T : notnull =>
-        Any(
-            optionProvidersAsync.ToAsyncEnumerable()
-                .Select(async (Func<Task<Option<T>>> optionProvider, CancellationToken _) => await optionProvider())
-        );
+    public static async Task<Option<T>> Any<T>(params IEnumerable<Func<Task<Option<T>>>> optionProvidersAsync) where T : notnull
+    {
+        foreach (var optionProviderAsync in optionProvidersAsync)
+        {
+            var option = await optionProviderAsync();
+
+            if (option.TryUnwrap(out var value))
+            {
+                return value;
+            }
+        }
+
+        return default;
+    }
 }

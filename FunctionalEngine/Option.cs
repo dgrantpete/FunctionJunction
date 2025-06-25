@@ -1,5 +1,4 @@
-﻿using FunctionalEngine.Extensions;
-using FunctionalEngine.Generator;
+﻿using FunctionalEngine.Generator;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using static FunctionalEngine.Prelude;
@@ -543,15 +542,24 @@ public static class Option
     /// <typeparam name="T">The type of the values in the <see cref="Option{T}"/> collection. Must be non-null.</typeparam>
     /// <param name="options">The collection of <see cref="Option{T}"/> values to combine.</param>
     /// <returns>An <see cref="Option{T}"/> containing a list of all values if all are <c>Some</c>, otherwise <c>None</c>.</returns>
-    public static Option<IImmutableList<T>> All<T>(IEnumerable<Option<T>> options) where T : notnull =>
-        options
-            .Scan(
-                Some<IImmutableList<T>>([]),
-                (previousOptions, option) => previousOptions.And(() => option)
-                    .MapTuple((previousValues, value) => previousValues.Add(value))
-            )
-            .TakeWhileInclusive(option => option.IsSome)
-            .Last();
+    public static Option<ImmutableArray<T>> All<T>(IEnumerable<Option<T>> options) where T : notnull
+    {
+        var values = ImmutableArray.CreateBuilder<T>();
+
+        foreach (var option in options)
+        {
+            if (option.TryUnwrap(out var value))
+            {
+                values.Add(value);
+            }
+            else
+            {
+                return default;
+            }
+        }
+
+        return default;
+    }
 
     /// <summary>
     /// Combines multiple <see cref="Option{T}"/> provider functions into a single <see cref="Option{T}"/> containing a list of all values.
@@ -563,8 +571,8 @@ public static class Option
     /// <typeparam name="T">The type of the values in the <see cref="Option{T}"/> collection. Must be non-null.</typeparam>
     /// <param name="optionProviders">The collection of functions that provide <see cref="Option{T}"/> values to combine.</param>
     /// <returns>An <see cref="Option{T}"/> containing a list of all values if all providers return <c>Some</c>, otherwise <c>None</c>.</returns>
-    public static Option<IImmutableList<T>> All<T>(params IEnumerable<Func<Option<T>>> optionProviders) where T : notnull =>
-        All(optionProviders.Select(optionProvider => optionProvider()));
+    public static Option<ImmutableArray<T>> All<T>(params IEnumerable<Func<Option<T>>> optionProviders) where T : notnull =>
+        All(optionProviders.Select(Invoke));
 
     /// <summary>
     /// Returns the first <see cref="Option{T}"/> that contains a value from a collection of <see cref="Option{T}"/> values.
@@ -587,5 +595,5 @@ public static class Option
     /// <param name="optionProviders">The collection of functions that provide <see cref="Option{T}"/> values to search through.</param>
     /// <returns>The first <see cref="Option{T}"/> that is <c>Some</c>, or <c>None</c> if all providers return <c>None</c>.</returns>
     public static Option<T> Any<T>(params IEnumerable<Func<Option<T>>> optionProviders) where T : notnull =>
-        Any(optionProviders.Select(optionProvider => optionProvider()));
+        Any(optionProviders.Select(Invoke));
 }

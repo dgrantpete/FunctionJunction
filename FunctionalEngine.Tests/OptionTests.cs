@@ -17,7 +17,7 @@ public class OptionTests
     public void None_CreatesEmptyOption()
     {
         var option = None<int>();
-
+        
         Assert.False(option.IsSome);
         Assert.True(option.IsNone);
     }

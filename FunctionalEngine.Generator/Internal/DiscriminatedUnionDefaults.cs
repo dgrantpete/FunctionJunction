@@ -1,10 +1,12 @@
-﻿namespace FunctionalEngine.Generator.Internal;
+﻿using FunctionalEngine.Generator.Internal.Attributes;
+
+namespace FunctionalEngine.Generator.Internal;
 
 internal static class DiscriminatedUnionDefaults
 {
     public const string TemplateName = "DiscriminatedUnion.sbn";
 
-    public static string AttributeName { get; } = typeof(DiscriminatedUnionAttribute).FullName;
+    public const string AttributeName = $"FunctionalEngine.Generator.{nameof(DiscriminatedUnionAttribute)}";
 
     public static DiscriminatedUnionAttribute Instance { get; } = new();
 }

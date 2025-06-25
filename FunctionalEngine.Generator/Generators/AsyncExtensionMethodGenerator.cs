@@ -1,4 +1,5 @@
 ﻿using FunctionalEngine.Generator.Internal;
+using FunctionalEngine.Generator.Internal.Attributes;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -10,13 +11,14 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using Accessibility = FunctionalEngine.Generator.Internal.Accessibility;
 
 namespace FunctionalEngine.Generator.Generators;
 
 [Generator("C#")]
 internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
 {
-    private static readonly string[] templateSplitStrings = ["{0}"];
+    #region Template and Initialization
 
     private static readonly Lazy<Template> template = new(static () =>
     {
@@ -35,45 +37,38 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
     });
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
-    {   
+    {
         var methodInfoProvider = context.SyntaxProvider
-                .ForAttributeWithMetadataName(
-                    GenerateAsyncExtensionDefaults.AttributeName,
-                    static (node, _) => node is MethodDeclarationSyntax,
-                    GetMethodInfo
-                )
-                .SelectMany<MethodInfo?, MethodInfo>(static (maybeMethodInfo, _) => maybeMethodInfo switch
-                {
-                    null => [],
-                    { } methodInfo => [methodInfo]
-                });
+            .ForAttributeWithMetadataName(
+                GenerateAsyncExtensionDefaults.AttributeName,
+                static (syntaxNode, _) => syntaxNode is MethodDeclarationSyntax,
+                GetMethodInfo
+            )
+            .WhereNotNull();
 
         var renderModelProvider = methodInfoProvider.Collect()
-            .SelectMany(static (methodInfo, _) =>
-                methodInfo.GroupBy(
-                    methodInfo => (
-                        ExtensionClassName: string.Format(
-                            methodInfo.AttributeSettings.ExtensionClassName, 
-                            methodInfo.ContainingClass.Name
-                        ),
-                        Namespace: string.Format(
-                            methodInfo.AttributeSettings.Namespace,
-                            methodInfo.ContainingClass.Namespace
-                        ),
-                        methodInfo.ContainingClass.Accessibility
+            .SelectMany((value, cancellationToken) =>
+                value.GroupBy(
+                    methodInfo => CreateClassGroup(methodInfo, cancellationToken),
+                    (methodInfo) => new MethodRenderContext(
+                        CreateMethodModel(methodInfo, cancellationToken), 
+                        methodInfo.FilePath,
+                        methodInfo.Namespace
                     ),
-                    (classInfo, methodInfos) => 
-                        CreateClassModel(
-                            classInfo.ExtensionClassName, 
-                            classInfo.Namespace, 
-                            methodInfos.SelectMany(methodInfo => methodInfo.ContainingClass.Usings)
-                                .Distinct()
-                                .ToImmutableArray(), 
-                            classInfo.Accessibility, 
-                            methodInfos
-                        )
+                    static (classGroup, methodContexts) =>
+                    (
+                        classGroup, 
+                        methodContexts.ToEquatableArray()
+                    )
                 )
-            );
+            )
+            .Combine(context.CompilationProvider)
+            .Select(static (value, cancellationToken) =>
+            {
+                var ((classGroup, methodContexts), compilation) = value;
+
+                return CreateClassModel(classGroup, methodContexts, compilation, cancellationToken);
+            });
 
         context.RegisterSourceOutput(
             renderModelProvider,
@@ -86,68 +81,105 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
         );
     }
 
-    private static string GenerateCode(ClassRenderModel renderModel)
+    #endregion
+
+    #region Data Extraction
+
+    private static MethodInfo? GetMethodInfo(GeneratorAttributeSyntaxContext context, CancellationToken cancellationToken = default)
     {
-        var scriptObject = new ScriptObject();
-        scriptObject.Import(typeof(ScribanHelpers));
-        scriptObject.Import(renderModel);
-
-        var templateContext = new TemplateContext();
-        templateContext.PushGlobal(scriptObject);
-
-        return template.Value.Render(templateContext);
-    }
-
-    private static MethodInfo? GetMethodInfo(GeneratorAttributeSyntaxContext context, CancellationToken cancellationToken)
-    {
-        var compilationUnit = context.TargetNode.SyntaxTree.GetCompilationUnitRoot(cancellationToken);
-        var usings = compilationUnit.Usings
-            .Select(@using => @using.ToString())
-            .ToImmutableArray();
+        cancellationToken.ThrowIfCancellationRequested();
 
         if (context.TargetSymbol is not IMethodSymbol methodSymbol
-            || GetMethodType(methodSymbol) is not { } methodType
-            || GetClassInfo(methodSymbol.ContainingType, usings) is not { } classInfo
-            || GetAccessibility(methodSymbol.DeclaredAccessibility) is not { } accessibility
+                || methodSymbol.GetAccessibility() is not { } accessibility
+                || GetMethodType(methodSymbol) is not { } methodType
+                || methodSymbol.GetDocumentationCommentId() is not { } documentationReference
+                || GetConstantSymbols(context.SemanticModel.Compilation) is not { } constantSymbols
+                || GetClassInfo(methodSymbol.ContainingType, constantSymbols, cancellationToken) is not (var classInfo, var classAttributeInfo)
+                || context.Attributes is not [var attribute]
         )
         {
             return null;
         }
 
-        var methodAttribute = context.Attributes[0];
-        var methodAttributeInfo = GetAttributeInfo(methodAttribute);
+        var methodAttributeInfo = GetAttributeInfo(attribute);
 
-        var classAttribute = methodSymbol.ContainingType.GetAttributes()
-            .SingleOrDefault(attribute => attribute.AttributeClass?.ToDisplayString() == GenerateAsyncExtensionDefaults.AttributeName);
-
-        var classAttributeInfo = classAttribute switch
-        {
-            null => default(AttributeInfo?),
-            { } attribute => GetAttributeInfo(attribute)
-        };
-
-        var parameterInfos = methodSymbol.Parameters.Select(GetParameterInfo)
+        var parameters = methodSymbol.Parameters.Select(GetParameterInfo)
             .ToImmutableArray();
 
         var generics = methodSymbol.TypeParameters
             .Select(GetGenericInfo)
             .ToImmutableArray();
 
+        var returnType = GetReturnType(methodSymbol.ReturnType, constantSymbols, cancellationToken);
+
         return new(
             methodSymbol.Name,
-            classInfo,
-            parameterInfos,
-            GetTypeInfo(methodSymbol.ReturnType),
-            generics,
-            methodType,
             accessibility,
+            methodSymbol.ContainingNamespace.ToDisplayString(),
+            methodType,
+            parameters,
+            generics,
+            returnType,
             methodAttributeInfo.Or(classAttributeInfo)
-                .ToSettings()
+                .ToSettings(),
+            documentationReference,
+            context.TargetNode.SyntaxTree.FilePath,
+            classInfo
         );
     }
 
-    private static AttributeInfo GetAttributeInfo(AttributeData attribute)
+    private static (ClassInfo ClassInfo, AttributeInfo AttributeInfo)? GetClassInfo(INamedTypeSymbol classSymbol, ConstantSymbols constantSymbols, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (classSymbol.GetAccessibility() is not { } accessibility)
+        {
+            return null;
+        }
+
+        var attribute = classSymbol.GetAttributes()
+            .SingleOrDefault(attribute =>
+                SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, constantSymbols.GeneratorAttribute)
+            );
+
+        var attributeInfo = GetAttributeInfo(attribute);
+
+        var classInfo = new ClassInfo(
+            classSymbol.Name,
+            accessibility,
+            GetFormattedType(classSymbol),
+            classSymbol.TypeParameters
+                .Select(GetGenericInfo)
+                .ToImmutableArray()
+            );
+
+        return (classInfo, attributeInfo);
+    }
+
+    #endregion
+
+    #region Helper Methods
+
+    private static ConstantSymbols? GetConstantSymbols(Compilation compilation)
+    {
+        if (
+            compilation.GetTypeByMetadataName(GenerateAsyncExtensionDefaults.AttributeName) is not { } attributeSymbol
+                || compilation.GetTypeByMetadataName("System.Threading.Tasks.Task`1") is not { } taskSymbol
+        )
+        {
+            return null;
+        }
+
+        return new(taskSymbol, attributeSymbol);
+    }
+
+    private static AttributeInfo GetAttributeInfo(AttributeData? attribute)
+    {
+        if (attribute is null)
+        {
+            return default;
+        }
+
         var extensionClassName = (string?)attribute.NamedArguments
             .Select((string Name, TypedConstant Constant)? (argument) => (argument.Key, argument.Value))
             .SingleOrDefault(argument => argument?.Name is nameof(GenerateAsyncExtensionAttribute.ExtensionClassName))
@@ -174,34 +206,18 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
         };
     }
 
+    private static string GetFormattedType(ITypeSymbol typeSymbol) =>
+        typeSymbol.ToDisplayString(format: new(
+            typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces,
+            genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters
+        ));
+
     private static MethodType? GetMethodType(IMethodSymbol methodSymbol) => methodSymbol switch
     {
         { IsExtensionMethod: true } => MethodType.Extension,
         { IsStatic: false, MethodKind: MethodKind.Ordinary } => MethodType.Instance,
         _ => null
     };
-
-    private static ClassInfo? GetClassInfo(INamedTypeSymbol typeSymbol, ImmutableArray<string> usings)
-    {
-        if (GetAccessibility(typeSymbol.DeclaredAccessibility) is not { } accessibility)
-        {
-            return null;
-        }
-        
-        return new(
-            typeSymbol.Name,
-            typeSymbol.ToDisplayString(format: new(
-                typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces,
-                genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters
-            )),
-            typeSymbol.ContainingNamespace.ToDisplayString(),
-            usings,
-            typeSymbol.TypeParameters
-                .Select(GetGenericInfo)
-                .ToImmutableArray(),
-            accessibility
-        );
-    }
 
     private static GenericInfo GetGenericInfo(ITypeParameterSymbol typeParameterSymbol) =>
         new(
@@ -258,104 +274,65 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
     private static ParameterInfo GetParameterInfo(IParameterSymbol parameterSymbol) =>
         new(
             parameterSymbol.Name,
-            GetTypeInfo(parameterSymbol.Type)
+            GetFormattedType(parameterSymbol.Type)
         );
 
-    private static TypeInfo GetTypeInfo(ITypeSymbol typeSymbol)
+    private static ReturnTypeInfo GetReturnType(ITypeSymbol returnTypeSymbol, ConstantSymbols constantSymbols, CancellationToken cancellationToken = default)
     {
-        if (typeSymbol is IArrayTypeSymbol arraySymbol)
-        {
-            var name = $"{{0}}[{new string(',', arraySymbol.Rank - 1)}]";
+        cancellationToken.ThrowIfCancellationRequested();
 
+        if (
+            returnTypeSymbol is INamedTypeSymbol namedTypeSymbol
+                && SymbolEqualityComparer.Default.Equals(namedTypeSymbol.OriginalDefinition, constantSymbols.Task)
+                && namedTypeSymbol.TypeArguments is [var innerTypeSymbol]
+        )
+        {
             return new(
-                name, 
-                ImmutableArray.Create(GetTypeInfo(arraySymbol.ElementType))
+                SyncType: GetFormattedType(innerTypeSymbol),
+                ReturnsTask: true
             );
         }
 
-        if (typeSymbol is INamedTypeSymbol { OriginalDefinition.SpecialType: SpecialType.System_Nullable_T } nullableSymbol)
-        {
-            var innerType = GetTypeInfo(nullableSymbol.TypeArguments[0]);
+        return new(
+            SyncType: GetFormattedType(returnTypeSymbol),
+            ReturnsTask: false
+        );
+    }
 
-            return new("{0}?", ImmutableArray.Create(innerType));
-        }
+    #endregion
 
-        if (typeSymbol is INamedTypeSymbol { IsGenericType: true, IsTupleType: false } genericSymbol)
-        {
-            var typeArguments = genericSymbol.TypeArguments.Select(GetTypeInfo).ToImmutableArray();
+    #region Model Creation
 
-            var displayName = genericSymbol.ToDisplayString(format: new(
-                genericsOptions: SymbolDisplayGenericsOptions.None,
-                typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces
-            ));
+    private static ClassGroup CreateClassGroup(MethodInfo methodInfo, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
 
-            var name = $"{displayName}<{{0}}>";
+        var classInfo = methodInfo.ClassInfo;
+        var attributeSettings = methodInfo.AttributeSettings;
 
-            return new TypeInfo(name, typeArguments);
-        }
+        var extensionClassName = FormatTemplatedName(classInfo.Name, attributeSettings.ExtensionClassName);
+        var @namespace = FormatTemplatedName(methodInfo.Namespace, attributeSettings.Namespace);
 
         return new(
-            typeSymbol.ToDisplayString(format: new(
-                typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces,
-                genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters
-            )),
-            ImmutableArray.Create<TypeInfo>()
-        );
-    }
-
-    private static Accessibility? GetAccessibility(Microsoft.CodeAnalysis.Accessibility accessibility) => accessibility switch
-    {
-        Microsoft.CodeAnalysis.Accessibility.Public => Accessibility.Public,
-        Microsoft.CodeAnalysis.Accessibility.Internal => Accessibility.Internal,
-        _ => null
-    };
-
-    private static string RenderType(TypeInfo type)
-    {
-        var renderedParameters = string.Join(
-            ", ",
-            type.TypeParameters
-                .Select(RenderType)
-        );
-
-        return string.Format(type.Name, renderedParameters);
-    }
-
-    private static ClassRenderModel CreateClassModel(
-        string extensionClassName, 
-        string @namespace, 
-        EquatableArray<string> usings,
-        Accessibility accessibility,
-        IEnumerable<MethodInfo> methodInfos
-    ) =>
-        new(
             extensionClassName,
             @namespace,
-            usings,
-            accessibility,
-            methodInfos.Select(CreateMethodModel)
-                .ToImmutableArray()
+            classInfo.Accessibility
         );
+    }
 
-    private static MethodRenderModel CreateMethodModel(MethodInfo methodInfo)
+    private static MethodRenderModel CreateMethodModel(MethodInfo methodInfo, CancellationToken cancellationToken = default)
     {
-        var needsExtraAwait = methodInfo.ReturnType.Name.EndsWith("Task<{0}>");
+        cancellationToken.ThrowIfCancellationRequested();
 
-        var returnType = needsExtraAwait switch
-        {
-            true => methodInfo.ReturnType.TypeParameters[0],
-            false => methodInfo.ReturnType
-        };
+        var classInfo = methodInfo.ClassInfo;
 
-        var renderedReturnType = RenderType(returnType);
-
-        var generics = methodInfo.ContainingClass.Generics
+        var generics = classInfo.Generics
             .Concat(methodInfo.Generics)
             .ToImmutableArray();
 
         var (extensionParameter, parameters) = CreateParameterModels(methodInfo);
 
-        var name = CreateMethodName(methodInfo.Name, methodInfo.AttributeSettings.ExtensionMethodName);
+        var name = FormatTemplatedName(methodInfo.Name, methodInfo.AttributeSettings.ExtensionMethodName);
 
         return new(
             name,
@@ -364,12 +341,95 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
             generics,
             extensionParameter,
             parameters,
-            renderedReturnType,
-            needsExtraAwait
+            methodInfo.ReturnType.SyncType,
+            methodInfo.ReturnType.ReturnsTask,
+            methodInfo.DocumentationReference
         );
     }
 
-    private static string CreateMethodName(string originalName, string nameTemplate)
+    private static (ParameterRenderModel ExtensionParameter, ImmutableArray<ParameterRenderModel> Parameters) CreateParameterModels(MethodInfo methodInfo)
+    {
+        if (methodInfo.Type is MethodType.Extension)
+        {
+            var parameters = methodInfo.Parameters
+                .Skip(1)
+                .Select(CreateParameterModel);
+
+            return (
+                CreateParameterModel(methodInfo.Parameters[0]),
+                [.. parameters]
+            );
+        }
+
+        var extensionParameter = new ParameterRenderModel(
+            methodInfo.ClassInfo.Name.ToCamelCase(),
+            methodInfo.ClassInfo.Type
+        );
+
+        return (extensionParameter, [.. methodInfo.Parameters.Select(CreateParameterModel)]);
+    }
+
+    private static ParameterRenderModel CreateParameterModel(ParameterInfo parameterInfo) =>
+        new(
+            parameterInfo.Name,
+            parameterInfo.Type
+        );
+
+    private static ClassRenderModel CreateClassModel(
+        ClassGroup classGroup,
+        EquatableArray<MethodRenderContext> methodContexts,
+        Compilation compilation,
+        CancellationToken cancellationToken = default
+    )
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var includedFilePaths = methodContexts.Select(methodContext => methodContext.FilePath)
+            .ToImmutableHashSet();
+
+        var usingsForOriginalNamespaces = methodContexts.Select(methodContext => methodContext.OriginalNamespace)
+            .Select(@namespace => $"using {@namespace};");
+
+        var usings = compilation.SyntaxTrees
+            .Where(syntaxTree => includedFilePaths.Contains(syntaxTree.FilePath))
+            .SelectMany(syntaxTree =>
+                syntaxTree.GetCompilationUnitRoot(cancellationToken)
+                    .Usings
+            )
+            .Select(@using => @using.ToString())
+            .Concat(usingsForOriginalNamespaces)
+            .Where(@using => @using != classGroup.Namespace)
+            .Distinct();
+
+        return new(
+            classGroup.ExtensionClassName,
+            classGroup.Namespace,
+            usings.ToImmutableArray(),
+            classGroup.Accessibility,
+            methodContexts.Select(methodContext => methodContext.Model)
+                .ToEquatableArray()
+        );
+    }
+
+    #endregion
+
+    #region Code Rendering
+
+    private static readonly string[] templateSplitStrings = ["{0}"];
+
+    private static string GenerateCode(ClassRenderModel renderModel)
+    {
+        var scriptObject = new ScriptObject();
+        scriptObject.Import(typeof(ScribanHelpers));
+        scriptObject.Import(renderModel);
+
+        var templateContext = new TemplateContext();
+        templateContext.PushGlobal(scriptObject);
+
+        return template.Value.Render(templateContext);
+    }
+
+    private static string FormatTemplatedName(string originalName, string nameTemplate)
     {
         var templateParts = nameTemplate.Split(templateSplitStrings, StringSplitOptions.None)
             .AsSpan();
@@ -387,41 +447,57 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
         return string.Join(originalName, templateParts.ToArray());
     }
 
-    private static (ParameterRenderModel ExtensionParameter, ImmutableArray<ParameterRenderModel> Parameters) CreateParameterModels(MethodInfo methodInfo)
+    private static class ScribanHelpers
     {
-        if (methodInfo.Type is MethodType.Extension)
-        {
-            var parameters = methodInfo.Parameters
-                .Skip(1)
-                .Select(CreateParameterModel);
+        public static string ToCamelCase(string text) => text.ToCamelCase();
 
-            return (
-                CreateParameterModel(methodInfo.Parameters[0]), 
-                [.. parameters]
-            );
-        }
-
-        var extensionParameter = new ParameterRenderModel(
-            ToCamelCase(methodInfo.ContainingClass.Name),
-            methodInfo.ContainingClass.Type
-        );
-
-        return (extensionParameter, [.. methodInfo.Parameters.Select(CreateParameterModel)]);
+        public static string RenderGenerics(IEnumerable<GenericInfo> generics) =>
+            $"<{string.Join(", ", generics.Select(generic => generic.Name))}>";
     }
 
-    private static ParameterRenderModel CreateParameterModel(ParameterInfo parameterInfo) =>
-        new(
-            parameterInfo.Name,
-            RenderType(parameterInfo.Type)
-        );
+    #endregion
 
-    private static string ToCamelCase(string pascalCaseString) =>
-        char.ToLowerInvariant(pascalCaseString[0]) + pascalCaseString[1..];
+    #region Data Models
 
-    private readonly record struct AttributeSettings(
-        string ExtensionClassName,
-        string ExtensionMethodName,
-        string Namespace
+    private readonly record struct ConstantSymbols(
+        INamedTypeSymbol Task,
+        INamedTypeSymbol GeneratorAttribute
+    );
+
+    private sealed record MethodInfo(
+        string Name,
+        Accessibility Accessibility,
+        string Namespace,
+        MethodType Type,
+        EquatableArray<ParameterInfo> Parameters,
+        EquatableArray<GenericInfo> Generics,
+        ReturnTypeInfo ReturnType,
+        AttributeSettings AttributeSettings,
+        string DocumentationReference,
+        string FilePath,
+        ClassInfo ClassInfo
+    );
+
+    private sealed record ClassInfo(
+        string Name,
+        Accessibility Accessibility,
+        string Type,
+        EquatableArray<GenericInfo> Generics
+    );
+
+    private readonly record struct ParameterInfo(
+        string Name,
+        string Type
+    );
+
+    private readonly record struct GenericInfo(
+        string Name,
+        string? Constraint
+    );
+
+    private readonly record struct ReturnTypeInfo(
+        string SyncType,
+        bool ReturnsTask
     );
 
     private readonly record struct AttributeInfo
@@ -434,13 +510,13 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
 
         public readonly AttributeSettings ToSettings() =>
             new(
-                ExtensionClassName ?? GenerateAsyncExtensionDefaults.ExtensionClassName,
-                ExtensionMethodName ?? GenerateAsyncExtensionDefaults.ExtensionMethodName,
-                Namespace ?? GenerateAsyncExtensionDefaults.Namespace
+                ExtensionClassName ?? GenerateAsyncExtensionDefaults.Instance.ExtensionClassName,
+                ExtensionMethodName ?? GenerateAsyncExtensionDefaults.Instance.ExtensionMethodName,
+                Namespace ?? GenerateAsyncExtensionDefaults.Instance.Namespace
             );
 
         public readonly AttributeInfo Or(AttributeInfo? other) =>
-            new()
+            this with
             {
                 ExtensionClassName = ExtensionClassName ?? other?.ExtensionClassName,
                 ExtensionMethodName = ExtensionMethodName ?? other?.ExtensionMethodName,
@@ -448,12 +524,30 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
             };
     }
 
+    private readonly record struct AttributeSettings(
+        string ExtensionClassName,
+        string ExtensionMethodName,
+        string Namespace
+    );
+
+    private readonly record struct ClassGroup(
+        string ExtensionClassName,
+        string Namespace,
+        Accessibility Accessibility
+    );
+
     private readonly record struct ClassRenderModel(
         string ExtensionClassName,
         string Namespace,
         EquatableArray<string> Usings,
         Accessibility Accessibility,
         EquatableArray<MethodRenderModel> Methods
+    );
+
+    private readonly record struct MethodRenderContext(
+        MethodRenderModel Model,
+        string FilePath,
+        string OriginalNamespace
     );
 
     private readonly record struct MethodRenderModel(
@@ -464,7 +558,8 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
         ParameterRenderModel ExtensionParameter,
         EquatableArray<ParameterRenderModel> Parameters,
         string ReturnType,
-        bool NeedsExtraAwait
+        bool NeedsExtraAwait,
+        string DocumentationReference
     );
 
     private readonly record struct ParameterRenderModel(
@@ -472,58 +567,11 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
         string Type
     );
 
-    private readonly record struct MethodInfo(
-        string Name,
-        ClassInfo ContainingClass,
-        EquatableArray<ParameterInfo> Parameters,
-        TypeInfo ReturnType,
-        EquatableArray<GenericInfo> Generics,
-        MethodType Type,
-        Accessibility Accessibility,
-        AttributeSettings AttributeSettings
-    );
-
-    private readonly record struct ClassInfo(
-        string Name,
-        string Type,
-        string Namespace,
-        EquatableArray<string> Usings,
-        EquatableArray<GenericInfo> Generics,
-        Accessibility Accessibility
-    );
-
-    private readonly record struct ParameterInfo(
-        string Name,
-        TypeInfo Type
-    );
-
-    private record TypeInfo(
-        string Name,
-        EquatableArray<TypeInfo> TypeParameters
-    );
-
-    private readonly record struct GenericInfo(
-        string Name,
-        string? Constraint
-    );
-
-    private enum Accessibility
-    {
-        Public,
-        Internal
-    }
-
     private enum MethodType
     {
         Instance,
         Extension
     }
 
-    private static class ScribanHelpers
-    {
-        public static string ToCamelCase(string text) => AsyncExtensionMethodGenerator.ToCamelCase(text);
-
-        public static string RenderGenerics(IEnumerable<GenericInfo> generics) =>
-            $"<{string.Join(", ", generics.Select(generic => generic.Name))}>";
-    }
+    #endregion
 }
