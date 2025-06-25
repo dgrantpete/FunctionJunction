@@ -1,0 +1,33 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<LangVersion>13.0</LangVersion>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<FunctionJunction_Defaults_GeneratePrivateConstructor>true</FunctionJunction_Defaults_GeneratePrivateConstructor>
+		<FunctionJunction_Defaults_MatchOn>Properties</FunctionJunction_Defaults_MatchOn>
+		<FunctionJunction_Defaults_GeneratePolymorphicSerialization>false</FunctionJunction_Defaults_GeneratePolymorphicSerialization>
+		<ReportAnalyzer>true</ReportAnalyzer>
+		<DefineConstants>$(DefineConstants);MAIN_PROJECT</DefineConstants>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="PolySharp" Version="1.15.0">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="System.Collections.Immutable" Version="9.0.6" />
+		<PackageReference Include="System.Diagnostics.Tools" Version="4.3.0" />
+		<PackageReference Include="System.Linq.AsyncEnumerable" Version="10.0.0-preview.5.25277.114" />
+		<CompilerVisibleProperty Include="FunctionJunction_Defaults_GeneratePolymorphicSerialization" />
+		<CompilerVisibleProperty Include="FunctionJunction_Defaults_MatchOn" />
+		<CompilerVisibleProperty Include="FunctionJunction_Defaults_GeneratePrivateConstructor" />
+	</ItemGroup>
+	
+	<ItemGroup>
+		<ProjectReference Include="..\FunctionJunction.Generator\FunctionJunction.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+	</ItemGroup>
+
+</Project>
