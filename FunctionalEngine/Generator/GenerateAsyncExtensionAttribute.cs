@@ -1,13 +1,17 @@
 ﻿using System;
 
+#if MAIN_PROJECT
 namespace FunctionalEngine.Generator;
+#else
+namespace FunctionalEngine.Generator.Internal.Attributes;
+#endif
 
 [AttributeUsage(AttributeTargets.Method | AttributeTargets.Class | AttributeTargets.Struct)]
 internal class GenerateAsyncExtensionAttribute : Attribute
 {
-    public string? ExtensionClassName { get; set; }
+    public string ExtensionClassName { get; set; } = "{0}ExtensionsAsync";
 
-    public string? ExtensionMethodName { get; set; }
+    public string ExtensionMethodName { get; set; } = "Await{0}";
 
-    public string? Namespace { get; set; }
+    public string Namespace { get; set; } = "{0}";
 }

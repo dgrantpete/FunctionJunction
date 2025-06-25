@@ -37,13 +37,12 @@
 		<ItemGroup>
 			<_Hash Include="$(PkgMicrosoft_Bcl_HashCode)\lib\netstandard2.0\Microsoft.Bcl.HashCode.dll" />
 		</ItemGroup>
-
 		<Copy SourceFiles="@(_Hash)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
 	</Target>
 
 	<ItemGroup>
 		<EmbeddedResource Include="Templates\*.sbn" />
-		<Compile Include="..\FunctionalEngine\Generator\*.cs" Link="%(Filename)%(Extension)" />
+		<Compile Include="..\FunctionalEngine\Generator\*.cs" Link="Internal\Attributes\%(Filename)%(Extension)" />
 	</ItemGroup>
 
 </Project>

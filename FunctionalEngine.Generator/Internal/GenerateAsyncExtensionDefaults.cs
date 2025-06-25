@@ -1,14 +1,12 @@
-﻿namespace FunctionalEngine.Generator.Internal;
+﻿using FunctionalEngine.Generator.Internal.Attributes;
+
+namespace FunctionalEngine.Generator.Internal;
 
 internal static class GenerateAsyncExtensionDefaults
 {
     public const string TemplateName = "AsyncExtensionMethod.sbn";
     
-    public static string AttributeName { get; } = typeof(GenerateAsyncExtensionAttribute).FullName;
+    public const string AttributeName = $"FunctionalEngine.Generator.{nameof(GenerateAsyncExtensionAttribute)}";
 
-    public const string ExtensionClassName = "{0}ExtensionsAsync";
-
-    public const string ExtensionMethodName = "Await{0}";
-
-    public const string Namespace = "{0}";
+    public static GenerateAsyncExtensionAttribute Instance { get; } = new();
 }

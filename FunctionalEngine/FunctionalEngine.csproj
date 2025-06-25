@@ -10,6 +10,7 @@
 		<FunctionalEngine_Defaults_MatchOn>Properties</FunctionalEngine_Defaults_MatchOn>
 		<FunctionalEngine_Defaults_GeneratePolymorphicSerialization>false</FunctionalEngine_Defaults_GeneratePolymorphicSerialization>
 		<ReportAnalyzer>true</ReportAnalyzer>
+		<DefineConstants>$(DefineConstants);MAIN_PROJECT</DefineConstants>
 	</PropertyGroup>
 
 	<ItemGroup>

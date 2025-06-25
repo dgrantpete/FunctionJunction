@@ -1,4 +1,6 @@
-﻿namespace FunctionalEngine;
+﻿using FunctionalEngine.Generator;
+
+namespace FunctionalEngine;
 
 /// <summary>
 /// Represents a value paired with its index position, typically used in enumeration scenarios.
@@ -9,3 +11,9 @@
 /// <param name="Value">The value at this position in the sequence.</param>
 /// <param name="Index">The zero-based index position of the value in the sequence.</param>
 public readonly record struct Enumerated<T>(T Value, int Index);
+
+[DiscriminatedUnion]
+public partial record Foo
+{
+    public record Bar(int A) : Foo;
+}

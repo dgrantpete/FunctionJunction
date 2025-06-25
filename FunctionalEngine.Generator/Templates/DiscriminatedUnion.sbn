@@ -1,62 +1,36 @@
 ﻿#nullable enable
 #pragma warning disable CS1591
 
-{{~ if attribute_settings.generate_match ~}}
+{{~ if match_model.size > 0 ~}}
 using System;
 {{~ end ~}}
-{{~ if attribute_settings.generate_polymorphic_serialization ~}}
+{{~ if polymorphic_attributes.size > 0 ~}}
 using System.Text.Json.Serialization;
 {{~ end ~}}
 
 namespace {{ namespace }} 
 {
-    {{~ if attribute_settings.generate_polymorphic_serialization ~}}
-    {{~ for member in members ~}}
-    {{~ if member.should_generate_serializer_attribute ~}}
-    [JsonDerivedType(typeof({{ member.name.plain }}))]
+    {{~ for attribute in polymorphic_attributes ~}}
+    {{ attribute }}
     {{~ end ~}}
-    {{~ end ~}}
-    {{~ end ~}}
-    partial {{ string.downcase type }} {{ name.with_generics }}
+    {{ string.downcase accessibility }} partial {{ string.downcase object_type }} {{ type }}
     {
-        {{~ if attribute_settings.generate_private_constructor ~}}
-        private {{ name.plain }}() { }
+        {{~ if generate_private_constructor ~}}
+        private {{ name }}() { }
 
         {{~ end ~}}
-        {{~ if attribute_settings.match_on == "Type" ~}}
+        {{~ if (array.size match_model) > 0 ~}}
         public TResult Match<TResult>(
-            {{~ for member in members ~}}
-            Func<{{ member.name.with_generics }}, TResult> on{{ member.name.plain }}{{ if !for.last }},{{ end }}
+            {{~ for match in match_model ~}}
+            {{ match.parameter }}{{ if !for.last }},{{ end }}
             {{~ end ~}}
         ) => 
             this switch
             {
-                {{~ for member in members ~}}
-                {{ member.name.with_generics }} value => on{{ member.name.plain }}(value),
+                {{~ for match in match_model ~}}
+                {{ match.match_arm }},
                 {{~ end ~}}
-                _ => throw new InvalidOperationException($"Type '{this.GetType()}' was not a known variant of the discriminated union '{{ name.with_generics }}' and was unhandled")
-            };
-
-        {{~ else if attribute_settings.match_on == "Properties" ~}}
-        public TResult Match<TResult>(
-            {{~ for member in members ~}}
-            {{~ if member.matchable_properties.size > 0 ~}}
-            Func<{{~ for prop in member.matchable_properties ~}}{{ prop.type.with_generics }}, {{~ end ~}}TResult> on{{ member.name.plain }}{{ if !for.last }},{{ end }}
-            {{~ else ~}}
-            Func<TResult> on{{ member.name.plain }}{{ if !for.last }},{{ end }}
-            {{~ end ~}}
-            {{~ end ~}}
-        ) => 
-            this switch
-            {
-                {{~ for member in members ~}}
-                {{~ if member.matchable_properties.size > 0 ~}}
-                {{ member.name.with_generics }} value => on{{ member.name.plain }}({{~ for prop in member.matchable_properties ~}}value.{{ prop.name }}{{ if !for.last }}, {{ end }}{{~ end ~}}),
-                {{~ else ~}}
-                {{ member.name.with_generics }} value => on{{ member.name.plain }}(),
-                {{~ end ~}}
-                {{~ end ~}}
-                _ => throw new InvalidOperationException($"Type '{this.GetType()}' was not a known variant of the discriminated union '{{ name.with_generics }}' and was unhandled.")
+                _ => throw new InvalidOperationException($"Type '{this.GetType()}' was not a known variant of the discriminated union '{{ type }}' and was unhandled")
             };
 
         {{~ end ~}}
