@@ -1,6 +1,4 @@
-﻿using FunctionalEngine.Generator;
-
-namespace FunctionalEngine;
+﻿namespace FunctionalEngine;
 
 /// <summary>
 /// Represents a value paired with its index position, typically used in enumeration scenarios.

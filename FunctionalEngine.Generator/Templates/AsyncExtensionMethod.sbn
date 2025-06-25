@@ -1,14 +1,13 @@
 ﻿{{~ func has_constraint(generic) ~}}
     {{~ ret generic.constraint ~}}
 {{~ end -}}
+#nullable enable
+#pragma warning disable CS8603
+
 using System.Threading.Tasks;
 {{~ for using in usings ~}}
 {{ using }}
 {{~ end ~}}
-
-#nullable enable
-#pragma warning disable CS8603
-#pragma warning disable CS1591
 
 namespace {{ namespace }}
 {

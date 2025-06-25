@@ -1,9 +1,5 @@
 ﻿#nullable enable
-#pragma warning disable CS1591
 
-{{~ if match_model.size > 0 ~}}
-using System;
-{{~ end ~}}
 {{~ if polymorphic_attributes.size > 0 ~}}
 using System.Text.Json.Serialization;
 {{~ end ~}}
@@ -20,6 +16,16 @@ namespace {{ namespace }}
 
         {{~ end ~}}
         {{~ if (array.size match_model) > 0 ~}}
+        /// <summary>
+        /// Matches the current instance against all possible variants of the <c>{{ name }}</c> discriminated union
+        /// and invokes the corresponding function.
+        /// </summary>
+        /// <typeparam name="TResult">The type of the result returned by the match functions.</typeparam>
+        {{~ for match in match_model ~}}
+        /// <param name="on{{ match.member_name }}">The function to invoke when the instance is of type <c>{{ match.member_name }}</c>.</param>
+        {{~ end ~}}
+        /// <returns>The result of invoking the corresponding matching function.</returns>
+        /// <exception cref="InvalidOperationException">Thrown when the instance is not a known variant of the discriminated union.</exception>
         public TResult Match<TResult>(
             {{~ for match in match_model ~}}
             {{ match.parameter }}{{ if !for.last }},{{ end }}

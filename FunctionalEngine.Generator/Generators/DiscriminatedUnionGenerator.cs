@@ -184,8 +184,6 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
         {
             var types = compilation.GetTypesByMetadataName(DiscriminatedUnionDefaults.AttributeName);
 
-            throw new InvalidOperationException($"{types.Length} {string.Join(", ", types)}");
-
             throw new InvalidOperationException($"The symbol for {nameof(DiscriminatedUnionAttribute)} could not be loaded.");
         }
 
@@ -386,6 +384,7 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
             cancellationToken.ThrowIfCancellationRequested();
 
             return new(
+                memberContext.Name,
                 RenderParameter(memberContext),
                 RenderArm(memberContext)
             );
@@ -430,6 +429,7 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
             }
 
             return new(
+                memberContext.Name,
                 RenderParameter(memberContext, deconstructInfo),
                 RenderArm(memberContext, deconstructInfo)
             );
@@ -573,6 +573,7 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
     }
 
     private readonly record struct MatchRenderModel(
+        string MemberName,
         string Parameter,
         string MatchArm
     );

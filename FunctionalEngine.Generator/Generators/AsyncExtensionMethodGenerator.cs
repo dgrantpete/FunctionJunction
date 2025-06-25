@@ -50,23 +50,24 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
             .SelectMany((value, cancellationToken) =>
                 value.GroupBy(
                     methodInfo => CreateClassGroup(methodInfo, cancellationToken),
-                    (MethodRenderModel MethodModel, string FilePath) (methodInfo) => (CreateMethodModel(methodInfo, cancellationToken), methodInfo.FilePath),
-                    static (classGroup, methodDatas) =>
+                    (methodInfo) => new MethodRenderContext(
+                        CreateMethodModel(methodInfo, cancellationToken), 
+                        methodInfo.FilePath,
+                        methodInfo.Namespace
+                    ),
+                    static (classGroup, methodContexts) =>
                     (
                         classGroup, 
-                        methodModels: methodDatas.Select(methodData => methodData.MethodModel)
-                            .ToEquatableArray(),
-                        filePaths: methodDatas.Select(methodData => methodData.FilePath)
-                            .ToEquatableArray()
+                        methodContexts.ToEquatableArray()
                     )
                 )
             )
             .Combine(context.CompilationProvider)
             .Select(static (value, cancellationToken) =>
             {
-                var ((classGroup, methodModels, filePaths), compilation) = value;
+                var ((classGroup, methodContexts), compilation) = value;
 
-                return CreateClassModel(classGroup, methodModels, filePaths, compilation, cancellationToken);
+                return CreateClassModel(classGroup, methodContexts, compilation, cancellationToken);
             });
 
         context.RegisterSourceOutput(
@@ -361,7 +362,7 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
         }
 
         var extensionParameter = new ParameterRenderModel(
-            ToCamelCase(methodInfo.ClassInfo.Name),
+            methodInfo.ClassInfo.Name.ToCamelCase(),
             methodInfo.ClassInfo.Type
         );
 
@@ -376,21 +377,28 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
 
     private static ClassRenderModel CreateClassModel(
         ClassGroup classGroup,
-        EquatableArray<MethodRenderModel> methodModels,
-        EquatableArray<string> filePaths,
+        EquatableArray<MethodRenderContext> methodContexts,
         Compilation compilation,
         CancellationToken cancellationToken = default
     )
     {
         cancellationToken.ThrowIfCancellationRequested();
 
+        var includedFilePaths = methodContexts.Select(methodContext => methodContext.FilePath)
+            .ToImmutableHashSet();
+
+        var usingsForOriginalNamespaces = methodContexts.Select(methodContext => methodContext.OriginalNamespace)
+            .Select(@namespace => $"using {@namespace};");
+
         var usings = compilation.SyntaxTrees
-            .Where(syntaxTree => filePaths.Contains(syntaxTree.FilePath))
+            .Where(syntaxTree => includedFilePaths.Contains(syntaxTree.FilePath))
             .SelectMany(syntaxTree =>
                 syntaxTree.GetCompilationUnitRoot(cancellationToken)
                     .Usings
             )
             .Select(@using => @using.ToString())
+            .Concat(usingsForOriginalNamespaces)
+            .Where(@using => @using != classGroup.Namespace)
             .Distinct();
 
         return new(
@@ -398,7 +406,8 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
             classGroup.Namespace,
             usings.ToImmutableArray(),
             classGroup.Accessibility,
-            methodModels
+            methodContexts.Select(methodContext => methodContext.Model)
+                .ToEquatableArray()
         );
     }
 
@@ -438,12 +447,9 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
         return string.Join(originalName, templateParts.ToArray());
     }
 
-    private static string ToCamelCase(string pascalCaseString) =>
-        char.ToLowerInvariant(pascalCaseString[0]) + pascalCaseString[1..];
-
     private static class ScribanHelpers
     {
-        public static string ToCamelCase(string text) => AsyncExtensionMethodGenerator.ToCamelCase(text);
+        public static string ToCamelCase(string text) => text.ToCamelCase();
 
         public static string RenderGenerics(IEnumerable<GenericInfo> generics) =>
             $"<{string.Join(", ", generics.Select(generic => generic.Name))}>";
@@ -536,6 +542,12 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
         EquatableArray<string> Usings,
         Accessibility Accessibility,
         EquatableArray<MethodRenderModel> Methods
+    );
+
+    private readonly record struct MethodRenderContext(
+        MethodRenderModel Model,
+        string FilePath,
+        string OriginalNamespace
     );
 
     private readonly record struct MethodRenderModel(

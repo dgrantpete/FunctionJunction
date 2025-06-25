@@ -120,4 +120,18 @@ public static class Prelude
     ) =>
         (firstInput, secondInput, thirdInput, fourthInput) =>
             outputFunction(inputFunction(firstInput, secondInput, thirdInput, fourthInput));
+
+    /// <summary>
+    /// Calls the function which is passed in. Useful for compositional and point-free code.
+    /// </summary>
+    /// <param name="function">The function to be called.</param>
+    /// <returns>The return value of the function being passed in.</returns>
+    /// <remarks>
+    /// <code>
+    /// IEnumerable&lt;Func&lt;T&gt;&gt; lazyValues = ...;
+    /// 
+    /// IEnumerable&lt;T&gt; computedValues = lazyValues.Select(Invoke);
+    /// </code>
+    /// </remarks>
+    public static T Invoke<T>(Func<T> function) => function();
 }
