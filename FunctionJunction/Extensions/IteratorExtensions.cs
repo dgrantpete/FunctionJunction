@@ -13,13 +13,13 @@ public static class IteratorExtensions
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
     /// <param name="source">The sequence to enumerate with indices.</param>
     /// <returns>An <see cref="IEnumerable{T}"/> of <see cref="Enumerated{T}"/> containing each value paired with its index.</returns>
-    /// <example>
+    /// <remarks>
     /// <code>
     /// var fruits = new[] { "apple", "banana", "cherry" };
     /// var enumerated = fruits.Enumerate();
     /// // Results in: [("apple", 0), ("banana", 1), ("cherry", 2)]
     /// </code>
-    /// </example>
+    /// </remarks>
     public static IEnumerable<Enumerated<T>> Enumerate<T>(this IEnumerable<T> source) =>
         source.Select((value, index) => new Enumerated<T>(value, index));
 
@@ -34,13 +34,13 @@ public static class IteratorExtensions
     /// <param name="seed">The initial accumulator value.</param>
     /// <param name="scanner">The accumulator function to apply to each element.</param>
     /// <returns>An <see cref="IEnumerable{T}"/> containing the seed and all intermediate accumulation results.</returns>
-    /// <example>
+    /// <remarks>
     /// <code>
     /// var numbers = new[] { 1, 2, 3, 4 };
     /// var sums = numbers.Scan(0, (acc, x) => acc + x);
     /// // Results in: [0, 1, 3, 6, 10] (running sum)
     /// </code>
-    /// </example>
+    /// </remarks>
     public static IEnumerable<TResult> Scan<TSource, TResult>(this IEnumerable<TSource> source, TResult seed, Func<TResult, TSource, TResult> scanner)
     {
         var current = seed;
@@ -63,13 +63,13 @@ public static class IteratorExtensions
     /// <param name="source">The sequence to scan over.</param>
     /// <param name="scanner">The accumulator function to apply to each element.</param>
     /// <returns>An <see cref="IEnumerable{T}"/> containing the first element and all intermediate accumulation results.</returns>
-    /// <example>
+    /// <remarks>
     /// <code>
     /// var numbers = new[] { 10, 2, 3, 4 };
     /// var products = numbers.Scan((acc, x) => acc * x);
     /// // Results in: [10, 20, 60, 240] (running product)
     /// </code>
-    /// </example>
+    /// </remarks>
     public static IEnumerable<T> Scan<T>(this IEnumerable<T> source, Func<T, T, T> scanner)
     {
         using var enumerator = source.GetEnumerator();
@@ -101,13 +101,13 @@ public static class IteratorExtensions
     /// <param name="source">The sequence to transform and filter.</param>
     /// <param name="conditionalSelector">A function that transforms elements and determines inclusion via <see cref="Option{T}"/>.</param>
     /// <returns>An <see cref="IEnumerable{T}"/> containing only the transformed values from <c>Some</c> results.</returns>
-    /// <example>
+    /// <remarks>
     /// <code>
     /// var strings = new[] { "1", "abc", "42", "xyz" };
     /// var numbers = strings.SelectWhere(s => int.TryParse(s, out var n) ? Some(n) : None&lt;int&gt;());
     /// // Results in: [1, 42] (only successfully parsed integers)
     /// </code>
-    /// </example>
+    /// </remarks>
     public static IEnumerable<TResult> SelectWhere<TSource, TResult>(this IEnumerable<TSource> source, Func<TSource, Option<TResult>> conditionalSelector) 
         where TResult : notnull 
     =>
@@ -123,13 +123,13 @@ public static class IteratorExtensions
     /// <param name="source">The sequence to take elements from.</param>
     /// <param name="predicate">The condition to test each element against.</param>
     /// <returns>An <see cref="IEnumerable{T}"/> containing elements while the predicate is true, plus the first failing element.</returns>
-    /// <example>
+    /// <remarks>
     /// <code>
     /// var numbers = new[] { 1, 3, 5, 6, 8, 10 };
     /// var result = numbers.TakeWhileInclusive(x => x % 2 == 1);
     /// // Results in: [1, 3, 5, 6] (includes 6, the first even number)
     /// </code>
-    /// </example>
+    /// </remarks>
     public static IEnumerable<T> TakeWhileInclusive<T>(this IEnumerable<T> source, Func<T, bool> predicate)
     {
         foreach (var item in source)
