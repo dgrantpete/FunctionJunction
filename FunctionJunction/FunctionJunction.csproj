@@ -62,4 +62,17 @@
 		<CompilerVisibleProperty Include="FunctionJunction_Defaults_GeneratePrivateConstructor" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<None Include="..\FunctionJunction.Generator\bin\$(Configuration)\netstandard2.0\FunctionJunction.Generator.dll"
+			  Pack="true"
+			  PackagePath="analyzers/dotnet/cs"
+			  Visible="false" />
+
+		<None Include="..\FunctionJunction.Generator\bin\$(Configuration)\netstandard2.0\FunctionJunction.Generator.json"
+			  Condition="Exists('..\FunctionJunction.Generator\bin\$(Configuration)\netstandard2.0\FunctionJunction.Generator.json')"
+			  Pack="true"
+			  PackagePath="analyzers/dotnet/cs"
+			  Visible="false" />
+	</ItemGroup>
+
 </Project>
