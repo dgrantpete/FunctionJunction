@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="FunctionJunction.png" alt="Function Junction Icon"/>
+  <img src="FunctionJunction.png" alt="Function Junction Icon" width="128"/>
 </p>
 
 # FunctionJunction
