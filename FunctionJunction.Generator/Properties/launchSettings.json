@@ -2,7 +2,7 @@
   "profiles": {
     "Roslyn Debugger Profile": {
       "commandName": "DebugRoslynComponent",
-      "targetProject": "..\\FunctionalEngine\\FunctionalEngine.csproj"
+      "targetProject": "..\\FunctionJunction\\FunctionJunction.csproj"
     }
   }
 }

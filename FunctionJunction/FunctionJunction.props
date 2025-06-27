@@ -1,0 +1,7 @@
+<Project>
+	<ItemGroup>
+		<CompilerVisibleProperty Include="FunctionJunction_Defaults_GeneratePolymorphicSerialization" />
+		<CompilerVisibleProperty Include="FunctionJunction_Defaults_MatchOn" />
+		<CompilerVisibleProperty Include="FunctionJunction_Defaults_GeneratePrivateConstructor" />
+	</ItemGroup>
+</Project>

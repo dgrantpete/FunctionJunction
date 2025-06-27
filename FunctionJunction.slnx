@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="Directory.Build.props" />
+    <File Path="FunctionJunction.png" />
+    <File Path="README.md" />
+  </Folder>
+  <Project Path="FunctionJunction.Generator/FunctionJunction.Generator.csproj" />
+  <Project Path="FunctionJunction.Tests/FunctionJunction.Tests.csproj" />
+  <Project Path="FunctionJunction/FunctionJunction.csproj" />
+</Solution>

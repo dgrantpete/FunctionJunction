@@ -1,33 +1,65 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>netstandard2.0</TargetFramework>
-		<LangVersion>13.0</LangVersion>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<Nullable>enable</Nullable>
+		<Authors>Grant Peterson</Authors>
+		<NeutralLanguage>en-US</NeutralLanguage>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<Version>0.1.0-alpha</Version>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<FunctionJunction_Defaults_GeneratePrivateConstructor>true</FunctionJunction_Defaults_GeneratePrivateConstructor>
-		<FunctionJunction_Defaults_MatchOn>Properties</FunctionJunction_Defaults_MatchOn>
-		<FunctionJunction_Defaults_GeneratePolymorphicSerialization>false</FunctionJunction_Defaults_GeneratePolymorphicSerialization>
-		<ReportAnalyzer>true</ReportAnalyzer>
-		<DefineConstants>$(DefineConstants);MAIN_PROJECT</DefineConstants>
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<RepositoryType>git</RepositoryType>
+		<PackageIcon>FunctionJunction.png</PackageIcon>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+
+		<Description>Opinionated functional helpers for C# that keep your railway-oriented code on track.</Description>
+		<PackageTags>functional;railway;source-generator;linq;discriminated-union</PackageTags>
+		<RepositoryUrl>https://github.com/dgrantpete/FunctionJunction</RepositoryUrl>
+		<RepositoryBranch>main</RepositoryBranch>
 	</PropertyGroup>
 
 	<ItemGroup>
+		<None Include="../FunctionJunction.png" Pack="true" PackagePath="" Visible="false"/>
+		<None Include="../README.md" Pack="true" PackagePath="" Visible="false"/>
+	</ItemGroup>
+	
+	<PropertyGroup>
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<LangVersion>13.0</LangVersion>
+		<Deterministic>true</Deterministic>
+		<DefineConstants>$(DefineConstants);MAIN_PROJECT</DefineConstants>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<FunctionJunction_Defaults_GeneratePrivateConstructor>true</FunctionJunction_Defaults_GeneratePrivateConstructor>
+		<FunctionJunction_Defaults_MatchOn>Properties</FunctionJunction_Defaults_MatchOn>
+		<FunctionJunction_Defaults_GeneratePolymorphicSerialization>false</FunctionJunction_Defaults_GeneratePolymorphicSerialization>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="System.Collections.Immutable" Version="9.0.6" />
+		<PackageReference Include="System.Diagnostics.Tools" Version="4.3.0" />
+		<PackageReference Include="System.Linq.AsyncEnumerable" Version="10.0.0-preview.5.25277.114" />
 		<PackageReference Include="PolySharp" Version="1.15.0">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="System.Collections.Immutable" Version="9.0.6" />
-		<PackageReference Include="System.Diagnostics.Tools" Version="4.3.0" />
-		<PackageReference Include="System.Linq.AsyncEnumerable" Version="10.0.0-preview.5.25277.114" />
-		<CompilerVisibleProperty Include="FunctionJunction_Defaults_GeneratePolymorphicSerialization" />
-		<CompilerVisibleProperty Include="FunctionJunction_Defaults_MatchOn" />
-		<CompilerVisibleProperty Include="FunctionJunction_Defaults_GeneratePrivateConstructor" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\FunctionJunction.Generator\FunctionJunction.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all"/>
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="FunctionJunction.props" Pack="true" PackagePath="build/" />
+		<None Include="FunctionJunction.props" Pack="true" PackagePath="buildTransitive/" />
 	</ItemGroup>
 	
 	<ItemGroup>
-		<ProjectReference Include="..\FunctionJunction.Generator\FunctionJunction.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+		<CompilerVisibleProperty Include="FunctionJunction_Defaults_GeneratePolymorphicSerialization" />
+		<CompilerVisibleProperty Include="FunctionJunction_Defaults_MatchOn" />
+		<CompilerVisibleProperty Include="FunctionJunction_Defaults_GeneratePrivateConstructor" />
 	</ItemGroup>
 
 </Project>

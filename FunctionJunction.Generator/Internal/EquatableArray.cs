@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections;
 using System.Collections.Immutable;
-using System.Linq;
 
 namespace FunctionJunction.Generator.Internal;
 
@@ -20,14 +17,15 @@ internal readonly record struct EquatableArray<T>(ImmutableArray<T> Array) : IRe
 
     public override int GetHashCode()
     {
-        var hash = new HashCode();
-
-        foreach (var element in Array)
+        unchecked
         {
-            hash.Add(element);
+            int hash = 17;
+            foreach (var element in Array)
+            {
+                hash = hash * 31 + (element?.GetHashCode() ?? 0);
+            }
+            return hash;
         }
-
-        return hash.ToHashCode();
     }
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
