@@ -1,5 +1,6 @@
 <Project>
   <PropertyGroup>
+	  <UseArtifactsOutput>true</UseArtifactsOutput>
 	  <ImplicitUsings>enable</ImplicitUsings>
 	  <Nullable>enable</Nullable>
   </PropertyGroup>

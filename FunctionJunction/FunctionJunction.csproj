@@ -20,8 +20,8 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<None Include="../FunctionJunction.png" Pack="true" PackagePath="" Visible="false"/>
-		<None Include="../README.md" Pack="true" PackagePath="" Visible="false"/>
+		<None Include="../FunctionJunction.png" Pack="true" PackagePath="" Visible="false" />
+		<None Include="../README.md" Pack="true" PackagePath="" Visible="false" />
 	</ItemGroup>
 	
 	<PropertyGroup>
@@ -48,31 +48,28 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\FunctionJunction.Generator\FunctionJunction.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all"/>
+		<ProjectReference Include="..\FunctionJunction.Generator\FunctionJunction.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<None Include="FunctionJunction.props" Pack="true" PackagePath="build/" />
 		<None Include="FunctionJunction.props" Pack="true" PackagePath="buildTransitive/" />
 	</ItemGroup>
-	
+
 	<ItemGroup>
 		<CompilerVisibleProperty Include="FunctionJunction_Defaults_GeneratePolymorphicSerialization" />
 		<CompilerVisibleProperty Include="FunctionJunction_Defaults_MatchOn" />
 		<CompilerVisibleProperty Include="FunctionJunction_Defaults_GeneratePrivateConstructor" />
 	</ItemGroup>
 
-	<ItemGroup>
-		<None Include="..\FunctionJunction.Generator\bin\$(Configuration)\netstandard2.0\FunctionJunction.Generator.dll"
-			  Pack="true"
-			  PackagePath="analyzers/dotnet/cs"
-			  Visible="false" />
-
-		<None Include="..\FunctionJunction.Generator\bin\$(Configuration)\netstandard2.0\FunctionJunction.Generator.json"
-			  Condition="Exists('..\FunctionJunction.Generator\bin\$(Configuration)\netstandard2.0\FunctionJunction.Generator.json')"
-			  Pack="true"
-			  PackagePath="analyzers/dotnet/cs"
-			  Visible="false" />
-	</ItemGroup>
+	<Target Name="PackAnalyzers" DependsOnTargets="ResolveProjectReferences;ResolvePackageDependenciesDesignTime" BeforeTargets="_GetPackageFiles">
+		<ItemGroup>
+			<None Include="@(Analyzer)" Condition="$([System.String]::Copy('%(Filename)').StartsWith('FunctionJunction'))">
+				<Pack>true</Pack>
+				<PackagePath>analyzers/dotnet/cs</PackagePath>
+				<Visible>false</Visible>
+			</None>
+		</ItemGroup>
+	</Target>
 
 </Project>
