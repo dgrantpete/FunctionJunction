@@ -5,13 +5,8 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Text;
 using Scriban;
-using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.IO;
-using System.Linq;
 using System.Text;
-using System.Threading;
 using Accessibility = FunctionJunction.Generator.Internal.Accessibility;
 
 namespace FunctionJunction.Generator.Generators;
@@ -113,7 +108,7 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
             .Where(memberSymbol => SymbolEqualityComparer.Default.Equals(memberSymbol.ContainingType, unionSymbol))
             .Select(GetMemberInfo)
             .OfType<MemberInfo>()
-            .ToEquatableArray();
+            .ToImmutableArray();
 
         MemberInfo? GetMemberInfo(INamedTypeSymbol memberSymbol)
         {
@@ -167,7 +162,7 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
             .Select(parameter =>
                 new ParameterInfo(parameter.Name, SymbolId.Create(parameter))
             )
-            .ToEquatableArray();
+            .ToImmutableArray();
 
         return new(parameters, accessibility);
     }
@@ -208,8 +203,8 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
 
         return new()
         {
-            MatchOn = unionArguments.GetValueOrDefault(nameof(DiscriminatedUnionAttribute.MatchOn))
-                ?.Value as MatchUnionOn?,
+            MatchOn = (MatchUnionOn?)(unionArguments.GetValueOrDefault(nameof(DiscriminatedUnionAttribute.MatchOn))
+                ?.Value as int?),
             GeneratePolymorphicSerialization = unionArguments.GetValueOrDefault(nameof(DiscriminatedUnionAttribute.GeneratePolymorphicSerialization))
                 ?.Value as bool?,
             GeneratePrivateConstructor = unionArguments.GetValueOrDefault(nameof(DiscriminatedUnionAttribute.GeneratePrivateConstructor))
@@ -343,11 +338,11 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
         {
             MatchModel = CreateMatchModel(memberContexts, context, cancellationToken),
             PolymorphicAttributes = CreatePolymorphicAttributes(memberContexts, context, cancellationToken)
-                .ToEquatableArray()
+                .ToImmutableArray()
         };
     }
 
-    private static EquatableArray<MatchRenderModel> CreateMatchModel(
+    private static ImmutableArray<MatchRenderModel> CreateMatchModel(
         IEnumerable<MemberRenderContext> memberContexts, 
         RenderContext context,
         CancellationToken cancellationToken = default
@@ -370,14 +365,14 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
         return [];
     }
 
-    private static EquatableArray<MatchRenderModel> CreateTypeMatchModel(
+    private static ImmutableArray<MatchRenderModel> CreateTypeMatchModel(
         IEnumerable<MemberRenderContext> memberContexts,
         CancellationToken cancellationToken = default
     )
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        return memberContexts.Select(CreateMatchModel).ToEquatableArray();
+        return [.. memberContexts.Select(CreateMatchModel)];
 
         MatchRenderModel CreateMatchModel(MemberRenderContext memberContext)
         {
@@ -409,7 +404,7 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
         }
     }
 
-    private static EquatableArray<MatchRenderModel> CreatePropertiesMatchModel(
+    private static ImmutableArray<MatchRenderModel> CreatePropertiesMatchModel(
         IEnumerable<MemberRenderContext> memberContexts,
         RenderContext context,
         CancellationToken cancellationToken = default

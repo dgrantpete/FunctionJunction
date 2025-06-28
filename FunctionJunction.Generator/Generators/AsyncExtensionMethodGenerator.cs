@@ -5,12 +5,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Scriban;
 using Scriban.Runtime;
-using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.IO;
-using System.Linq;
-using System.Threading;
 using Accessibility = FunctionJunction.Generator.Internal.Accessibility;
 
 namespace FunctionJunction.Generator.Generators;
