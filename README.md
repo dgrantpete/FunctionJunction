@@ -1,5 +1,9 @@
 # FunctionJunction
 
+<p align="center">
+  <img src="FunctionJunction.png" alt="Function Junction Icon" width="128"/>
+</p>
+
 A functional programming library for C# that provides Option and Result types, discriminated unions, and functional combinators with comprehensive async support.
 
 ## Installation
