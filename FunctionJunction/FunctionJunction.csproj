@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<Authors>Grant Peterson</Authors>
-		<Version>0.1.0-alpha</Version>
+		<Version>0.1.0-alpha.1</Version>
 		<NeutralLanguage>en-US</NeutralLanguage>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<RepositoryUrl>https://github.com/dgrantpete/FunctionJunction</RepositoryUrl>
