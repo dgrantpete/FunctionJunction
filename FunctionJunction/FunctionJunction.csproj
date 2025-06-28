@@ -2,21 +2,23 @@
 
 	<PropertyGroup>
 		<Authors>Grant Peterson</Authors>
+		<Version>0.1.0-alpha</Version>
 		<NeutralLanguage>en-US</NeutralLanguage>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
-		<Version>0.1.0-alpha</Version>
+		<RepositoryUrl>https://github.com/dgrantpete/FunctionJunction</RepositoryUrl>
+		<RepositoryBranch>main</RepositoryBranch>
+		<RepositoryType>git</RepositoryType>
+		<Description>Opinionated functional helpers for C# that keep your railway-oriented code on track.</Description>
+		<PackageTags>functional;railway;source-generator;linq;discriminated-union</PackageTags>
+		
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<IncludeSymbols>true</IncludeSymbols>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-		<RepositoryType>git</RepositoryType>
+		<ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+		<EmbedUntrackedSources>true</EmbedUntrackedSources>
 		<PackageIcon>FunctionJunction.png</PackageIcon>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-
-		<Description>Opinionated functional helpers for C# that keep your railway-oriented code on track.</Description>
-		<PackageTags>functional;railway;source-generator;linq;discriminated-union</PackageTags>
-		<RepositoryUrl>https://github.com/dgrantpete/FunctionJunction</RepositoryUrl>
-		<RepositoryBranch>main</RepositoryBranch>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -26,9 +28,6 @@
 	
 	<PropertyGroup>
 		<TargetFramework>netstandard2.0</TargetFramework>
-		<LangVersion>13.0</LangVersion>
-		<Deterministic>true</Deterministic>
-		<ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
 		<DefineConstants>$(DefineConstants);MAIN_PROJECT</DefineConstants>
 	</PropertyGroup>
 
