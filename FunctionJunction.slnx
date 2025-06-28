@@ -2,6 +2,7 @@
   <Folder Name="/Solution Items/">
     <File Path="Directory.Build.props" />
     <File Path="FunctionJunction.png" />
+    <File Path="LICENSE.txt" />
     <File Path="README.md" />
   </Folder>
   <Project Path="FunctionJunction.Generator/FunctionJunction.Generator.csproj" />
