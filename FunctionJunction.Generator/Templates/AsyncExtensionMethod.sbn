@@ -16,12 +16,12 @@ namespace {{ namespace }}
         {{~ for method in methods ~}}
         {{~ valid_constraints = method.generics | array.filter @has_constraint | array.map "constraint" ~}}
         /// <summary>
-        /// Awaits the extended <see cref="Task"/> and passes it into <see cref="{{ method.documentation_reference }}"/>.
+        /// Awaits the extended <see cref="ValueTask"/> and passes it into <see cref="{{ method.documentation_reference }}"/>.
         /// </summary>
-        /// <returns>A <see cref="Task"/> which wraps the returned type of <see cref="{{ method.documentation_reference }}"/>.</returns>
+        /// <returns>A <see cref="ValueTask"/> which wraps the returned type of <see cref="{{ method.documentation_reference }}"/>.</returns>
         /// <inheritdoc cref="{{ method.documentation_reference }}"/>
-        {{ string.downcase method.accessibility }} static async Task<{{ method.return_type }}> {{ method.name }}{{ render_generics method.generics }}(
-            this Task<{{ method.extension_parameter.type }}> {{ method.extension_parameter.name }}Task
+        {{ string.downcase method.accessibility }} static async ValueTask<{{ method.return_type }}> {{ method.name }}{{ render_generics method.generics }}(
+            this ValueTask<{{ method.extension_parameter.type }}> {{ method.extension_parameter.name }}Task
             {{- for parameter in method.parameters }},
             {{ parameter.type }} {{ parameter.name }}{{ end }}
         )

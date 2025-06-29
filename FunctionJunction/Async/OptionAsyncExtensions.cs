@@ -1,5 +1,4 @@
-﻿using System.Collections.Immutable;
-using static FunctionJunction.Prelude;
+﻿using static FunctionJunction.Prelude;
 
 namespace FunctionJunction.Async;
 

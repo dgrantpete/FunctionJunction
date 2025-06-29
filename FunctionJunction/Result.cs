@@ -65,7 +65,7 @@ public abstract partial record Result<TOk, TError>
         {
             Value = value;
         }
-
+        
         /// <summary>
         /// Deconstructs this <c>Error</c> result into its contained error value.
         /// </summary>

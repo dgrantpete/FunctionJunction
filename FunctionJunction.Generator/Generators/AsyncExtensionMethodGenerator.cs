@@ -160,12 +160,13 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
         if (
             compilation.GetTypeByMetadataName(GenerateAsyncExtensionDefaults.AttributeName) is not { } attributeSymbol
                 || compilation.GetTypeByMetadataName("System.Threading.Tasks.Task`1") is not { } taskSymbol
+                || compilation.GetTypeByMetadataName("System.Threading.Tasks.ValueTask`1") is not { } valueTaskSymbol
         )
         {
             return null;
         }
 
-        return new(taskSymbol, attributeSymbol);
+        return new(taskSymbol, valueTaskSymbol, attributeSymbol);
     }
 
     private static AttributeInfo GetAttributeInfo(AttributeData? attribute)
@@ -278,7 +279,9 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
 
         if (
             returnTypeSymbol is INamedTypeSymbol namedTypeSymbol
-                && SymbolEqualityComparer.Default.Equals(namedTypeSymbol.OriginalDefinition, constantSymbols.Task)
+                && (SymbolEqualityComparer.Default.Equals(namedTypeSymbol.OriginalDefinition, constantSymbols.Task)
+                    || SymbolEqualityComparer.Default.Equals(namedTypeSymbol.OriginalDefinition, constantSymbols.ValueTask)
+                )
                 && namedTypeSymbol.TypeArguments is [var innerTypeSymbol]
         )
         {
@@ -456,6 +459,7 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
 
     private readonly record struct ConstantSymbols(
         INamedTypeSymbol Task,
+        INamedTypeSymbol ValueTask,
         INamedTypeSymbol GeneratorAttribute
     );
 

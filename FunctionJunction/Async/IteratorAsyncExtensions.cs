@@ -17,7 +17,7 @@ public static class IteratorAsyncExtensions
     {
         var index = 0;
 
-        await foreach (var item in source)
+        await foreach (var item in source.ConfigureAwait(false))
         {
             yield return new(item, index);
 
@@ -35,15 +35,15 @@ public static class IteratorAsyncExtensions
     /// <param name="seed">The initial accumulator value.</param>
     /// <param name="scannerAsync">The async accumulator function to apply to each element.</param>
     /// <returns>An <see cref="IAsyncEnumerable{T}"/> containing the seed and all intermediate accumulation results.</returns>
-    public static async IAsyncEnumerable<TResult> Scan<TSource, TResult>(this IAsyncEnumerable<TSource> source, TResult seed, Func<TResult, TSource, Task<TResult>> scannerAsync)
+    public static async IAsyncEnumerable<TResult> Scan<TSource, TResult>(this IAsyncEnumerable<TSource> source, TResult seed, Func<TResult, TSource, ValueTask<TResult>> scannerAsync)
     {
         var current = seed;
 
         yield return current;
 
-        await foreach (var item in source)
+        await foreach (var item in source.ConfigureAwait(false))
         {
-            current = await scannerAsync(current, item);
+            current = await scannerAsync(current, item).ConfigureAwait(false);
 
             yield return current;
         }
@@ -64,7 +64,7 @@ public static class IteratorAsyncExtensions
 
         yield return current;
 
-        await foreach (var item in source)
+        await foreach (var item in source.ConfigureAwait(false))
         {
             current = scanner(current, item);
 
@@ -80,9 +80,9 @@ public static class IteratorAsyncExtensions
     /// <param name="source">The async sequence to scan over.</param>
     /// <param name="scannerAsync">The async accumulator function to apply to each element.</param>
     /// <returns>An <see cref="IAsyncEnumerable{T}"/> containing the first element and all intermediate accumulation results.</returns>
-    public static async IAsyncEnumerable<T> Scan<T>(this IAsyncEnumerable<T> source, Func<T, T, Task<T>> scannerAsync)
+    public static async IAsyncEnumerable<T> Scan<T>(this IAsyncEnumerable<T> source, Func<T, T, ValueTask<T>> scannerAsync)
     {
-        await using var asyncEnumerator = source.GetAsyncEnumerator();
+        await using var asyncEnumerator = source.ConfigureAwait(false).GetAsyncEnumerator();
 
         if (!await asyncEnumerator.MoveNextAsync())
         {
@@ -95,7 +95,7 @@ public static class IteratorAsyncExtensions
 
         while (await asyncEnumerator.MoveNextAsync())
         {
-            current = await scannerAsync(current, asyncEnumerator.Current);
+            current = await scannerAsync(current, asyncEnumerator.Current).ConfigureAwait(false);
 
             yield return current;
         }
@@ -111,7 +111,7 @@ public static class IteratorAsyncExtensions
     /// <returns>An <see cref="IAsyncEnumerable{T}"/> containing the first element and all intermediate accumulation results.</returns>
     public static async IAsyncEnumerable<T> Scan<T>(this IAsyncEnumerable<T> source, Func<T, T, T> scanner)
     {
-        await using var asyncEnumerator = source.GetAsyncEnumerator();
+        await using var asyncEnumerator = source.ConfigureAwait(false).GetAsyncEnumerator();
 
         if (!await asyncEnumerator.MoveNextAsync())
         {
@@ -139,12 +139,12 @@ public static class IteratorAsyncExtensions
     /// <param name="source">The async sequence to transform and filter.</param>
     /// <param name="conditionalSelectorAsync">An async function that transforms elements and determines inclusion via <see cref="Option{T}"/>.</param>
     /// <returns>An <see cref="IAsyncEnumerable{T}"/> containing only the transformed values from <c>Some</c> results.</returns>
-    public static async IAsyncEnumerable<TResult> SelectWhere<TSource, TResult>(this IAsyncEnumerable<TSource> source, Func<TSource, Task<Option<TResult>>> conditionalSelectorAsync)
+    public static async IAsyncEnumerable<TResult> SelectWhere<TSource, TResult>(this IAsyncEnumerable<TSource> source, Func<TSource, ValueTask<Option<TResult>>> conditionalSelectorAsync)
         where TResult : notnull
     {
-        await foreach (var item in source)
+        await foreach (var item in source.ConfigureAwait(false))
         {
-            var option = await conditionalSelectorAsync(item);
+            var option = await conditionalSelectorAsync(item).ConfigureAwait(false);
 
             if (option.TryUnwrap(out var value))
             {
@@ -165,7 +165,7 @@ public static class IteratorAsyncExtensions
     public static async IAsyncEnumerable<TResult> SelectWhere<TSource, TResult>(this IAsyncEnumerable<TSource> source, Func<TSource, Option<TResult>> conditionalSelector)
         where TResult : notnull
     {
-        await foreach (var item in source)
+        await foreach (var item in source.ConfigureAwait(false))
         {
             var option = conditionalSelector(item);
 
@@ -184,13 +184,13 @@ public static class IteratorAsyncExtensions
     /// <param name="source">The async sequence to take elements from.</param>
     /// <param name="predicateAsync">The async condition to test each element against.</param>
     /// <returns>An <see cref="IAsyncEnumerable{T}"/> containing elements while the predicate is true, plus the first failing element.</returns>
-    public static async IAsyncEnumerable<T> TakeWhileInclusive<T>(this IAsyncEnumerable<T> source, Func<T, Task<bool>> predicateAsync)
+    public static async IAsyncEnumerable<T> TakeWhileInclusive<T>(this IAsyncEnumerable<T> source, Func<T, ValueTask<bool>> predicateAsync)
     {
-        await foreach (var item in source)
+        await foreach (var item in source.ConfigureAwait(false))
         {
             yield return item;
 
-            if (!await predicateAsync(item))
+            if (!await predicateAsync(item).ConfigureAwait(false))
             {
                 yield break;
             }
@@ -207,7 +207,7 @@ public static class IteratorAsyncExtensions
     /// <returns>An <see cref="IAsyncEnumerable{T}"/> containing elements while the predicate is true, plus the first failing element.</returns>
     public static async IAsyncEnumerable<T> TakeWhileInclusive<T>(this IAsyncEnumerable<T> source, Func<T, bool> predicate)
     {
-        await foreach (var item in source)
+        await foreach (var item in source.ConfigureAwait(false))
         {
             yield return item;
 
