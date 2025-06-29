@@ -74,17 +74,17 @@ public readonly record struct Option<T> where T : notnull
         );
 
     /// <summary>
-    /// Asynchronously applies a function that returns a <c>Task&lt;Option&lt;TResult&gt;&gt;</c> to the value inside this <see cref="Option{T}"/>, flattening the result.
-    /// If this <see cref="Option{T}"/> is <c>None</c>, returns a completed <see cref="Task"/> containing <c>None</c> without calling the mapper.
+    /// Asynchronously applies a function that returns a <c>ValueTask&lt;Option&lt;TResult&gt;&gt;</c> to the value inside this <see cref="Option{T}"/>, flattening the result.
+    /// If this <see cref="Option{T}"/> is <c>None</c>, returns a completed <see cref="ValueTask"/> containing <c>None</c> without calling the mapper.
     /// </summary>
     /// <typeparam name="TResult">The type of the value in the <see cref="Option{T}"/> returned by the async mapper. Must be non-null.</typeparam>
-    /// <param name="mapperAsync">An async function that takes the contained value and returns a <c>Task&lt;Option&lt;TResult&gt;&gt;</c>.</param>
-    /// <returns>A <see cref="Task"/> containing the <see cref="Option{T}"/> returned by the async mapper if this <see cref="Option{T}"/> is <c>Some</c>, otherwise a <see cref="Task"/> containing <c>None</c>.</returns>
+    /// <param name="mapperAsync">An async function that takes the contained value and returns a <c>ValueTask&lt;Option&lt;TResult&gt;&gt;</c>.</param>
+    /// <returns>A <see cref="ValueTask"/> containing the <see cref="Option{T}"/> returned by the async mapper if this <see cref="Option{T}"/> is <c>Some</c>, otherwise a <see cref="ValueTask"/> containing <c>None</c>.</returns>
     [GenerateAsyncExtension]
-    public Task<Option<TResult>> FlatMap<TResult>(Func<T, Task<Option<TResult>>> mapperAsync) where TResult : notnull =>
+    public ValueTask<Option<TResult>> FlatMap<TResult>(Func<T, ValueTask<Option<TResult>>> mapperAsync) where TResult : notnull =>
         Match(
             mapperAsync,
-            () => Task.FromResult(default(Option<TResult>))
+            () => new ValueTask<Option<TResult>>(default(Option<TResult>))
         );
 
     /// <summary>
@@ -100,14 +100,14 @@ public readonly record struct Option<T> where T : notnull
 
     /// <summary>
     /// Asynchronously transforms the value inside this <see cref="Option{T}"/> using the provided async function.
-    /// If this <see cref="Option{T}"/> is <c>None</c>, returns a completed <see cref="Task"/> containing <c>None</c> without calling the mapper.
+    /// If this <see cref="Option{T}"/> is <c>None</c>, returns a completed <see cref="ValueTask"/> containing <c>None</c> without calling the mapper.
     /// </summary>
     /// <typeparam name="TResult">The type of the transformed value. Must be non-null.</typeparam>
     /// <param name="mapperAsync">An async function that transforms the contained value to a new value of type <typeparamref name="TResult"/>.</param>
-    /// <returns>A <see cref="Task"/> containing an <see cref="Option{T}"/> with the transformed value if this <see cref="Option{T}"/> is <c>Some</c>, otherwise a <see cref="Task"/> containing <c>None</c>.</returns>
+    /// <returns>A <see cref="ValueTask"/> containing an <see cref="Option{T}"/> with the transformed value if this <see cref="Option{T}"/> is <c>Some</c>, otherwise a <see cref="ValueTask"/> containing <c>None</c>.</returns>
     [GenerateAsyncExtension]
-    public Task<Option<TResult>> Map<TResult>(Func<T, Task<TResult>> mapperAsync) where TResult : notnull =>
-        FlatMap(async value => new Option<TResult>(await mapperAsync(value)));
+    public ValueTask<Option<TResult>> Map<TResult>(Func<T, ValueTask<TResult>> mapperAsync) where TResult : notnull =>
+        FlatMap(async value => new Option<TResult>(await mapperAsync(value).ConfigureAwait(false)));
 
     /// <summary>
     /// Filters the <see cref="Option{T}"/> based on a predicate. If the <see cref="Option{T}"/> is <c>Some</c> and the predicate returns <see langword="true"/>, returns the original <see cref="Option{T}"/>.
@@ -128,10 +128,10 @@ public readonly record struct Option<T> where T : notnull
     /// If the <see cref="Option{T}"/> is <c>Some</c> but the predicate returns <see langword="false"/>, or if the <see cref="Option{T}"/> is <c>None</c>, returns <c>None</c>.
     /// </summary>
     /// <param name="filterAsync">An async predicate function that tests the contained value.</param>
-    /// <returns>A <see cref="Task"/> containing the original <see cref="Option{T}"/> if it contains a value that satisfies the predicate, otherwise a <see cref="Task"/> containing <c>None</c>.</returns>
+    /// <returns>A <see cref="ValueTask"/> containing the original <see cref="Option{T}"/> if it contains a value that satisfies the predicate, otherwise a <see cref="ValueTask"/> containing <c>None</c>.</returns>
     [GenerateAsyncExtension]
-    public Task<Option<T>> Filter(Func<T, Task<bool>> filterAsync) =>
-        FlatMap(async value => await filterAsync(value) switch
+    public ValueTask<Option<T>> Filter(Func<T, ValueTask<bool>> filterAsync) =>
+        FlatMap(async value => await filterAsync(value).ConfigureAwait(false) switch
         {
             true => new Option<T>(value),
             false => default
@@ -155,11 +155,11 @@ public readonly record struct Option<T> where T : notnull
     /// This operation allows for chaining multiple async <see cref="Option{T}"/> sources, returning the first one that contains a value.
     /// </summary>
     /// <param name="otherProviderAsync">An async function that provides an alternative <see cref="Option{T}"/> when this <see cref="Option{T}"/> is <c>None</c>.</param>
-    /// <returns>A <see cref="Task"/> containing this <see cref="Option{T}"/> if it is <c>Some</c>, otherwise a <see cref="Task"/> containing the <see cref="Option{T}"/> returned by the async alternative provider.</returns>
+    /// <returns>A <see cref="ValueTask"/> containing this <see cref="Option{T}"/> if it is <c>Some</c>, otherwise a <see cref="ValueTask"/> containing the <see cref="Option{T}"/> returned by the async alternative provider.</returns>
     [GenerateAsyncExtension]
-    public Task<Option<T>> Or(Func<Task<Option<T>>> otherProviderAsync) =>
+    public ValueTask<Option<T>> Or(Func<ValueTask<Option<T>>> otherProviderAsync) =>
         Match(
-            value => Task.FromResult(new Option<T>(value)),
+            value => new ValueTask<Option<T>>(new Option<T>(value)),
             otherProviderAsync
         );
 
@@ -180,11 +180,11 @@ public readonly record struct Option<T> where T : notnull
     /// </summary>
     /// <typeparam name="TOther">The type of the value in the other <see cref="Option{T}"/>. Must be non-null.</typeparam>
     /// <param name="otherProviderAsync">An async function that provides another <see cref="Option{T}"/> to combine with this one.</param>
-    /// <returns>A <see cref="Task"/> containing an <see cref="Option{T}"/> with a tuple of both values if both are <c>Some</c>, otherwise a <see cref="Task"/> containing <c>None</c>.</returns>
+    /// <returns>A <see cref="ValueTask"/> containing an <see cref="Option{T}"/> with a tuple of both values if both are <c>Some</c>, otherwise a <see cref="ValueTask"/> containing <c>None</c>.</returns>
     [GenerateAsyncExtension]
-    public Task<Option<(T Left, TOther Right)>> And<TOther>(Func<Task<Option<TOther>>> otherProviderAsync) where TOther : notnull =>
+    public ValueTask<Option<(T Left, TOther Right)>> And<TOther>(Func<ValueTask<Option<TOther>>> otherProviderAsync) where TOther : notnull =>
         FlatMap(async value => 
-            (await otherProviderAsync())
+            (await otherProviderAsync().ConfigureAwait(false))
                 .Map(otherValue => (value, otherValue))
         );
 
@@ -207,12 +207,12 @@ public readonly record struct Option<T> where T : notnull
     /// Useful for async logging, debugging, or performing async side effects without modifying the <see cref="Option{T}"/>.
     /// </summary>
     /// <param name="tapperAsync">An async action to perform on the contained value if it exists.</param>
-    /// <returns>A <see cref="Task"/> containing the original <see cref="Option{T}"/> unchanged.</returns>
+    /// <returns>A <see cref="ValueTask"/> containing the original <see cref="Option{T}"/> unchanged.</returns>
     [GenerateAsyncExtension]
-    public Task<Option<T>> Tap(Func<T, Task> tapperAsync) =>
+    public ValueTask<Option<T>> Tap(Func<T, ValueTask> tapperAsync) =>
         Map(async value =>
         {
-            await tapperAsync(value);
+            await tapperAsync(value).ConfigureAwait(false);
             return value;
         });
 
@@ -235,12 +235,12 @@ public readonly record struct Option<T> where T : notnull
     /// Useful for async logging, debugging, or performing async side effects when no value is present.
     /// </summary>
     /// <param name="tapperAsync">An async action to perform when the <see cref="Option{T}"/> is <c>None</c>.</param>
-    /// <returns>A <see cref="Task"/> containing the original <see cref="Option{T}"/> unchanged.</returns>
+    /// <returns>A <see cref="ValueTask"/> containing the original <see cref="Option{T}"/> unchanged.</returns>
     [GenerateAsyncExtension]
-    public Task<Option<T>> TapNone(Func<Task> tapperAsync) =>
+    public ValueTask<Option<T>> TapNone(Func<ValueTask> tapperAsync) =>
         Or(async () =>
         {
-            await tapperAsync();
+            await tapperAsync().ConfigureAwait(false);
             return default;
         });
 
@@ -262,11 +262,11 @@ public readonly record struct Option<T> where T : notnull
     /// This is a safe way to get a value from an <see cref="Option{T}"/> without risking exceptions.
     /// </summary>
     /// <param name="defaultProviderAsync">An async function that provides a default value when the <see cref="Option{T}"/> is <c>None</c>.</param>
-    /// <returns>A <see cref="Task"/> containing the contained value if the <see cref="Option{T}"/> is <c>Some</c>, otherwise a <see cref="Task"/> containing the result of calling the async default provider.</returns>
+    /// <returns>A <see cref="ValueTask"/> containing the contained value if the <see cref="Option{T}"/> is <c>Some</c>, otherwise a <see cref="ValueTask"/> containing the result of calling the async default provider.</returns>
     [GenerateAsyncExtension]
-    public Task<T> UnwrapOr(Func<Task<T>> defaultProviderAsync) =>
+    public ValueTask<T> UnwrapOr(Func<ValueTask<T>> defaultProviderAsync) =>
         Match(
-            Task.FromResult,
+            value => new ValueTask<T>(value),
             defaultProviderAsync
         );
 
@@ -288,11 +288,11 @@ public readonly record struct Option<T> where T : notnull
     /// </summary>
     /// <typeparam name="TException">The type of exception to throw. Must inherit from <see cref="Exception"/>.</typeparam>
     /// <param name="exceptionProvider">An async function that provides the exception to throw when the <see cref="Option{T}"/> is <c>None</c>.</param>
-    /// <returns>A <see cref="Task"/> containing the contained value if the <see cref="Option{T}"/> is <c>Some</c>.</returns>
+    /// <returns>A <see cref="ValueTask"/> containing the contained value if the <see cref="Option{T}"/> is <c>Some</c>.</returns>
     /// <exception cref="Exception">Throws the exception provided by <paramref name="exceptionProvider"/> when the <see cref="Option{T}"/> is <c>None</c>.</exception>
     [GenerateAsyncExtension]
-    public Task<T> UnwrapOrThrow<TException>(Func<Task<TException>> exceptionProvider) where TException : Exception =>
-        UnwrapOr(async () => throw await exceptionProvider());
+    public ValueTask<T> UnwrapOrThrow<TException>(Func<ValueTask<TException>> exceptionProvider) where TException : Exception =>
+        UnwrapOr(async () => throw await exceptionProvider().ConfigureAwait(false));
 
     /// <summary>
     /// Extracts the value from the <see cref="Option{T}"/> if it contains one, otherwise throws an <see cref="InvalidOperationException"/> with a default message.
@@ -476,15 +476,15 @@ public static class Option
     };
 
     /// <summary>
-    /// Asynchronously creates an <see cref="Option{T}"/> from a <see cref="Task"/> containing a nullable reference type.
+    /// Asynchronously creates an <see cref="Option{T}"/> from a <see cref="ValueTask"/> containing a nullable reference type.
     /// If the awaited value is not <see langword="null"/>, returns <c>Some</c> containing the value.
     /// If the awaited value is <see langword="null"/>, returns <c>None</c>.
     /// Useful for converting async operations that return nullable reference types to the safer <see cref="Option{T}"/> type.
     /// </summary>
     /// <typeparam name="T">The reference type to wrap in an <see cref="Option{T}"/>.</typeparam>
     /// <param name="valueTask">The task containing the nullable value to convert.</param>
-    /// <returns>A <see cref="Task"/> containing an <see cref="Option{T}"/> with the value if not <see langword="null"/>, otherwise <c>None</c>.</returns>
-    public static async Task<Option<T>> AwaitFromNullable<T>(Task<T?> valueTask) where T : class => await valueTask switch
+    /// <returns>A <see cref="ValueTask"/> containing an <see cref="Option{T}"/> with the value if not <see langword="null"/>, otherwise <c>None</c>.</returns>
+    public static async ValueTask<Option<T>> AwaitFromNullable<T>(ValueTask<T?> valueTask) where T : class => await valueTask.ConfigureAwait(false) switch
     {
         { } someValue => new(someValue),
         null => default
@@ -506,15 +506,15 @@ public static class Option
     };
 
     /// <summary>
-    /// Asynchronously creates an <see cref="Option{T}"/> from a <see cref="Task"/> containing a nullable value type.
+    /// Asynchronously creates an <see cref="Option{T}"/> from a <see cref="ValueTask"/> containing a nullable value type.
     /// If the awaited value has a value, returns <c>Some</c> containing the value.
     /// If the awaited value is <see langword="null"/>, returns <c>None</c>.
     /// Useful for converting async operations that return nullable value types to the safer <see cref="Option{T}"/> type.
     /// </summary>
     /// <typeparam name="T">The value type to wrap in an <see cref="Option{T}"/>.</typeparam>
     /// <param name="valueTask">The task containing the nullable value to convert.</param>
-    /// <returns>A <see cref="Task"/> containing an <see cref="Option{T}"/> with the value if it has a value, otherwise <c>None</c>.</returns>
-    public static async Task<Option<T>> AwaitFromNullable<T>(Task<T?> valueTask) where T : struct => await valueTask switch
+    /// <returns>A <see cref="ValueTask"/> containing an <see cref="Option{T}"/> with the value if it has a value, otherwise <c>None</c>.</returns>
+    public static async ValueTask<Option<T>> AwaitFromNullable<T>(ValueTask<T?> valueTask) where T : struct => await valueTask.ConfigureAwait(false) switch
     {
         { } someValue => new(someValue),
         null => default
@@ -604,12 +604,12 @@ public static class Option
     /// </summary>
     /// <typeparam name="T">The type of values in the options. Must be non-null.</typeparam>
     /// <param name="options">The async sequence of options to combine.</param>
-    /// <returns>A <see cref="Task{T}"/> containing either <c>Some</c> with all values, or <c>None</c> if any option was <c>None</c>.</returns>
-    public static async Task<Option<ImmutableArray<T>>> All<T>(IAsyncEnumerable<Option<T>> options) where T : notnull
+    /// <returns>A <see cref="ValueTask{T}"/> containing either <c>Some</c> with all values, or <c>None</c> if any option was <c>None</c>.</returns>
+    public static async ValueTask<Option<ImmutableArray<T>>> All<T>(IAsyncEnumerable<Option<T>> options) where T : notnull
     {
         var values = ImmutableArray.CreateBuilder<T>();
 
-        await foreach (var option in options)
+        await foreach (var option in options.ConfigureAwait(false))
         {
             if (option.TryUnwrap(out var value))
             {
@@ -631,14 +631,14 @@ public static class Option
     /// </summary>
     /// <typeparam name="T">The type of values in the options. Must be non-null.</typeparam>
     /// <param name="optionProvidersAsync">The collection of async functions that provide options when executed.</param>
-    /// <returns>A <see cref="Task{T}"/> containing either <c>Some</c> with all values, or <c>None</c> if any option was <c>None</c>.</returns>
-    public static async Task<Option<ImmutableArray<T>>> All<T>(params IEnumerable<Func<Task<Option<T>>>> optionProvidersAsync) where T : notnull
+    /// <returns>A <see cref="ValueTask{T}"/> containing either <c>Some</c> with all values, or <c>None</c> if any option was <c>None</c>.</returns>
+    public static async ValueTask<Option<ImmutableArray<T>>> All<T>(params IEnumerable<Func<ValueTask<Option<T>>>> optionProvidersAsync) where T : notnull
     {
         var values = ImmutableArray.CreateBuilder<T>();
 
         foreach (var optionProviderAsync in optionProvidersAsync)
         {
-            var option = await optionProviderAsync();
+            var option = await optionProviderAsync().ConfigureAwait(false);
 
             if (option.TryUnwrap(out var value))
             {
@@ -660,9 +660,9 @@ public static class Option
     /// </summary>
     /// <typeparam name="T">The type of values in the options. Must be non-null.</typeparam>
     /// <param name="options">The async sequence of options to search.</param>
-    /// <returns>A <see cref="Task{T}"/> containing the first <c>Some</c> value found, or <c>None</c> if none exist.</returns>
-    public static async Task<Option<T>> Any<T>(IAsyncEnumerable<Option<T>> options) where T : notnull =>
-        await options.FirstOrDefaultAsync(option => option.IsSome);
+    /// <returns>A <see cref="ValueTask{T}"/> containing the first <c>Some</c> value found, or <c>None</c> if none exist.</returns>
+    public static async ValueTask<Option<T>> Any<T>(IAsyncEnumerable<Option<T>> options) where T : notnull =>
+        await options.FirstOrDefaultAsync(option => option.IsSome).ConfigureAwait(false);
 
     /// <summary>
     /// Asynchronously finds the first <c>Some</c> value from a collection of async option providers.
@@ -670,12 +670,12 @@ public static class Option
     /// </summary>
     /// <typeparam name="T">The type of values in the options. Must be non-null.</typeparam>
     /// <param name="optionProvidersAsync">The collection of async functions that provide options when executed.</param>
-    /// <returns>A <see cref="Task{T}"/> containing the first <c>Some</c> value found, or <c>None</c> if none exist.</returns>
-    public static async Task<Option<T>> Any<T>(params IEnumerable<Func<Task<Option<T>>>> optionProvidersAsync) where T : notnull
+    /// <returns>A <see cref="ValueTask{T}"/> containing the first <c>Some</c> value found, or <c>None</c> if none exist.</returns>
+    public static async ValueTask<Option<T>> Any<T>(params IEnumerable<Func<ValueTask<Option<T>>>> optionProvidersAsync) where T : notnull
     {
         foreach (var optionProviderAsync in optionProvidersAsync)
         {
-            var option = await optionProviderAsync();
+            var option = await optionProviderAsync().ConfigureAwait(false);
 
             if (option.TryUnwrap(out var value))
             {
