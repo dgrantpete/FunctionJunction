@@ -41,7 +41,7 @@ public static class Iterator
     /// var powersOfThree = Iterator.Iterate(async () => 1, async x => await SomeAsyncOperation(x * 3));
     /// </code>
     /// </remarks>
-    public static IAsyncEnumerable<T> Iterate<T>(Func<Task<T>> seedProviderAsync, Func<T, Task<T>> iteratorAsync) => 
+    public static IAsyncEnumerable<T> Iterate<T>(Func<ValueTask<T>> seedProviderAsync, Func<T, ValueTask<T>> iteratorAsync) => 
         new FunctionEnumerableAsync<T>(cancellationToken => new IteratorAsyncEnumerator<T>(seedProviderAsync, iteratorAsync, cancellationToken));
 
     private class FunctionEnumerable<T>(Func<IEnumerator<T>> enumeratorProvider) : IEnumerable<T>
@@ -57,7 +57,7 @@ public static class Iterator
             asyncEnumeratorProvider(cancellationToken);
     }
 
-    private class IteratorAsyncEnumerator<T>(Func<Task<T>> seedProviderAsync, Func<T, Task<T>> iteratorAsync, CancellationToken cancellationToken) : IAsyncEnumerator<T>
+    private class IteratorAsyncEnumerator<T>(Func<ValueTask<T>> seedProviderAsync, Func<T, ValueTask<T>> iteratorAsync, CancellationToken cancellationToken) : IAsyncEnumerator<T>
     {
         public T Current { get; private set; } = default!;
 
@@ -69,8 +69,8 @@ public static class Iterator
 
             Current = isMoved switch
             {
-                true => await iteratorAsync(Current),
-                false => await seedProviderAsync()
+                true => await iteratorAsync(Current).ConfigureAwait(false),
+                false => await seedProviderAsync().ConfigureAwait(false)
             };
 
             isMoved = true;

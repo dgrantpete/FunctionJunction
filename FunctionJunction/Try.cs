@@ -34,12 +34,12 @@ public static class Try<TException> where TException : Exception
     /// </summary>
     /// <typeparam name="TOk">The type of the success value returned by the async function.</typeparam>
     /// <param name="functionAsync">The async function to execute that may throw <typeparamref name="TException"/>.</param>
-    /// <returns>A <see cref="Task"/> containing a <see cref="Result{TOk, TError}"/> with either the function's result or the caught exception.</returns>
-    public static async Task<Result<TOk, TException>> Execute<TOk>(Func<Task<TOk>> functionAsync)
+    /// <returns>A <see cref="ValueTask"/> containing a <see cref="Result{TOk, TError}"/> with either the function's result or the caught exception.</returns>
+    public static async ValueTask<Result<TOk, TException>> Execute<TOk>(Func<ValueTask<TOk>> functionAsync)
     {
         try
         {
-            return Result.ApplyType<TException>.Ok(await functionAsync());
+            return Result.ApplyType<TException>.Ok(await functionAsync().ConfigureAwait(false));
         }
         catch (TException exception)
         {
@@ -72,7 +72,7 @@ public static class Try
     /// </summary>
     /// <typeparam name="TOk">The type of the success value returned by the async function.</typeparam>
     /// <param name="functionAsync">The async function to execute that may throw an exception.</param>
-    /// <returns>A <see cref="Task"/> containing a <see cref="Result{TOk, TError}"/> with either the function's result or any caught exception.</returns>
-    public static Task<Result<TOk, Exception>> Execute<TOk>(Func<Task<TOk>> functionAsync) =>
+    /// <returns>A <see cref="ValueTask"/> containing a <see cref="Result{TOk, TError}"/> with either the function's result or any caught exception.</returns>
+    public static ValueTask<Result<TOk, Exception>> Execute<TOk>(Func<ValueTask<TOk>> functionAsync) =>
         Try<Exception>.Execute(functionAsync);
 }
