@@ -105,17 +105,17 @@ public abstract partial record Result<TOk, TError>
         );
 
     /// <summary>
-    /// Asynchronously applies a function that returns a <c>Task&lt;Result&lt;TResult, TError&gt;&gt;</c> to the success value inside this <see cref="Result{TOk, TError}"/>, flattening the result.
-    /// If this <see cref="Result{TOk, TError}"/> is <c>Error</c>, returns a completed <see cref="Task"/> containing the error without calling the mapper.
+    /// Asynchronously applies a function that returns a <c>ValueTask&lt;Result&lt;TResult, TError&gt;&gt;</c> to the success value inside this <see cref="Result{TOk, TError}"/>, flattening the result.
+    /// If this <see cref="Result{TOk, TError}"/> is <c>Error</c>, returns a completed <see cref="ValueTask"/> containing the error without calling the mapper.
     /// </summary>
     /// <typeparam name="TResult">The type of the success value in the <see cref="Result{TOk, TError}"/> returned by the async mapper.</typeparam>
-    /// <param name="mapperAsync">An async function that takes the success value and returns a <c>Task&lt;Result&lt;TResult, TError&gt;&gt;</c>.</param>
-    /// <returns>A <see cref="Task"/> containing the <see cref="Result{TOk, TError}"/> returned by the async mapper if this <see cref="Result{TOk, TError}"/> is <c>Ok</c>, otherwise a <see cref="Task"/> containing the original error.</returns>
+    /// <param name="mapperAsync">An async function that takes the success value and returns a <c>ValueTask&lt;Result&lt;TResult, TError&gt;&gt;</c>.</param>
+    /// <returns>A <see cref="ValueTask"/> containing the <see cref="Result{TOk, TError}"/> returned by the async mapper if this <see cref="Result{TOk, TError}"/> is <c>Ok</c>, otherwise a <see cref="ValueTask"/> containing the original error.</returns>
     [GenerateAsyncExtension]
-    public Task<Result<TResult, TError>> FlatMap<TResult>(Func<TOk, Task<Result<TResult, TError>>> mapperAsync) =>
+    public ValueTask<Result<TResult, TError>> FlatMap<TResult>(Func<TOk, ValueTask<Result<TResult, TError>>> mapperAsync) =>
         Match(
             mapperAsync,
-            error => Task.FromResult<Result<TResult, TError>>(new Result<TResult, TError>.Error(error))
+            error => new ValueTask<Result<TResult, TError>>(new Result<TResult, TError>.Error(error))
         );
 
     /// <summary>
@@ -133,14 +133,14 @@ public abstract partial record Result<TOk, TError>
 
     /// <summary>
     /// Asynchronously transforms the success value inside this <see cref="Result{TOk, TError}"/> using the provided async function.
-    /// If this <see cref="Result{TOk, TError}"/> is <c>Error</c>, returns a completed <see cref="Task"/> containing the error without calling the mapper.
+    /// If this <see cref="Result{TOk, TError}"/> is <c>Error</c>, returns a completed <see cref="ValueTask"/> containing the error without calling the mapper.
     /// </summary>
     /// <typeparam name="TResult">The type of the transformed success value.</typeparam>
     /// <param name="mapperAsync">An async function that transforms the success value to a new value of type <typeparamref name="TResult"/>.</param>
-    /// <returns>A <see cref="Task"/> containing a <see cref="Result{TOk, TError}"/> with the transformed success value if this <see cref="Result{TOk, TError}"/> is <c>Ok</c>, otherwise a <see cref="Task"/> containing the original error.</returns>
+    /// <returns>A <see cref="ValueTask"/> containing a <see cref="Result{TOk, TError}"/> with the transformed success value if this <see cref="Result{TOk, TError}"/> is <c>Ok</c>, otherwise a <see cref="ValueTask"/> containing the original error.</returns>
     [GenerateAsyncExtension]
-    public Task<Result<TResult, TError>> Map<TResult>(Func<TOk, Task<TResult>> mapperAsync) =>
-        FlatMap(async ok => NewOk(await mapperAsync(ok)));
+    public ValueTask<Result<TResult, TError>> Map<TResult>(Func<TOk, ValueTask<TResult>> mapperAsync) =>
+        FlatMap(async ok => NewOk(await mapperAsync(ok).ConfigureAwait(false)));
 
     /// <summary>
     /// Attempts to recover from an error by applying a function that may produce a new <see cref="Result{TOk, TError}"/>.
@@ -164,11 +164,11 @@ public abstract partial record Result<TOk, TError>
     /// </summary>
     /// <typeparam name="TResult">The type of the error value in the <see cref="Result{TOk, TError}"/> returned by the async recoverer.</typeparam>
     /// <param name="recovererAsync">An async function that takes the error value and attempts to produce a successful result or a new error.</param>
-    /// <returns>A <see cref="Task"/> containing the original success value if <c>Ok</c>, otherwise a <see cref="Task"/> containing the <see cref="Result{TOk, TError}"/> returned by the async recoverer function.</returns>
+    /// <returns>A <see cref="ValueTask"/> containing the original success value if <c>Ok</c>, otherwise a <see cref="ValueTask"/> containing the <see cref="Result{TOk, TError}"/> returned by the async recoverer function.</returns>
     [GenerateAsyncExtension]
-    public Task<Result<TOk, TResult>> Recover<TResult>(Func<TError, Task<Result<TOk, TResult>>> recovererAsync) =>
+    public ValueTask<Result<TOk, TResult>> Recover<TResult>(Func<TError, ValueTask<Result<TOk, TResult>>> recovererAsync) =>
         Match(
-            ok => Task.FromResult<Result<TOk, TResult>>(new Result<TOk, TResult>.Ok(ok)),
+            ok => new ValueTask<Result<TOk, TResult>>(new Result<TOk, TResult>.Ok(ok)),
             recovererAsync
         );
 
@@ -193,11 +193,11 @@ public abstract partial record Result<TOk, TError>
     /// </summary>
     /// <typeparam name="TResult">The type of the transformed error value.</typeparam>
     /// <param name="mapperAsync">An async function that transforms the error value to a new value of type <typeparamref name="TResult"/>.</param>
-    /// <returns>A <see cref="Task"/> containing a <see cref="Result{TOk, TError}"/> with the original success value if <c>Ok</c>, otherwise a <see cref="Task"/> containing a <see cref="Result{TOk, TError}"/> with the transformed error value.</returns>
+    /// <returns>A <see cref="ValueTask"/> containing a <see cref="Result{TOk, TError}"/> with the original success value if <c>Ok</c>, otherwise a <see cref="ValueTask"/> containing a <see cref="Result{TOk, TError}"/> with the transformed error value.</returns>
     [GenerateAsyncExtension]
-    public Task<Result<TOk, TResult>> MapError<TResult>(Func<TError, Task<TResult>> mapperAsync) =>
+    public ValueTask<Result<TOk, TResult>> MapError<TResult>(Func<TError, ValueTask<TResult>> mapperAsync) =>
         Recover(async error =>
-            NewError(await mapperAsync(error))
+            NewError(await mapperAsync(error).ConfigureAwait(false))
         );
 
     /// <summary>
@@ -223,13 +223,13 @@ public abstract partial record Result<TOk, TError>
     /// </summary>
     /// <param name="validatorAsync">An async predicate function that tests the success value.</param>
     /// <param name="errorMapperAsync">An async function that converts the success value to an error when validation fails.</param>
-    /// <returns>A <see cref="Task"/> containing the original <see cref="Result{TOk, TError}"/> if validation passes or if already an error, otherwise a <see cref="Task"/> containing a new error <see cref="Result{TOk, TError}"/>.</returns>
+    /// <returns>A <see cref="ValueTask"/> containing the original <see cref="Result{TOk, TError}"/> if validation passes or if already an error, otherwise a <see cref="ValueTask"/> containing a new error <see cref="Result{TOk, TError}"/>.</returns>
     [GenerateAsyncExtension]
-    public Task<Result<TOk, TError>> Validate(Func<TOk, Task<bool>> validatorAsync, Func<TOk, Task<TError>> errorMapperAsync) =>
-        FlatMap(async ok => await validatorAsync(ok) switch
+    public ValueTask<Result<TOk, TError>> Validate(Func<TOk, ValueTask<bool>> validatorAsync, Func<TOk, ValueTask<TError>> errorMapperAsync) =>
+        FlatMap(async ok => await validatorAsync(ok).ConfigureAwait(false) switch
         {
             true => this,
-            false => NewError(await errorMapperAsync(ok))
+            false => NewError(await errorMapperAsync(ok).ConfigureAwait(false))
         });
 
     /// <summary>
@@ -249,10 +249,10 @@ public abstract partial record Result<TOk, TError>
     /// </summary>
     /// <typeparam name="TOther">The type of the success value in the other <see cref="Result{TOk, TError}"/>.</typeparam>
     /// <param name="otherProviderAsync">An async function that provides another <see cref="Result{TOk, TError}"/> to combine with this one.</param>
-    /// <returns>A <see cref="Task"/> containing a <see cref="Result{TOk, TError}"/> with a tuple of both success values if both are <c>Ok</c>, otherwise a <see cref="Task"/> containing the first error.</returns>
+    /// <returns>A <see cref="ValueTask"/> containing a <see cref="Result{TOk, TError}"/> with a tuple of both success values if both are <c>Ok</c>, otherwise a <see cref="ValueTask"/> containing the first error.</returns>
     [GenerateAsyncExtension]
-    public Task<Result<(TOk Left, TOther Right), TError>> And<TOther>(Func<Task<Result<TOther, TError>>> otherProviderAsync) =>
-        FlatMap(async ok => (await otherProviderAsync()).Map(otherOk => (ok, otherOk)));
+    public ValueTask<Result<(TOk Left, TOther Right), TError>> And<TOther>(Func<ValueTask<Result<TOther, TError>>> otherProviderAsync) =>
+        FlatMap(async ok => (await otherProviderAsync().ConfigureAwait(false)).Map(otherOk => (ok, otherOk)));
 
     /// <summary>
     /// Returns this <see cref="Result{TOk, TError}"/> if it is successful, otherwise attempts to recover using another <see cref="Result{TOk, TError}"/> with a different error type.
@@ -271,10 +271,10 @@ public abstract partial record Result<TOk, TError>
     /// </summary>
     /// <typeparam name="TOther">The type of the error value in the alternative <see cref="Result{TOk, TError}"/>.</typeparam>
     /// <param name="otherProviderAsync">An async function that provides an alternative <see cref="Result{TOk, TError}"/> when this <see cref="Result{TOk, TError}"/> is an error.</param>
-    /// <returns>A <see cref="Task"/> containing this <see cref="Result{TOk, TError}"/> if it is <c>Ok</c>, the alternative result if it is <c>Ok</c>, otherwise a <see cref="Task"/> containing a <see cref="Result{TOk, TError}"/> with a tuple of both errors.</returns>
+    /// <returns>A <see cref="ValueTask"/> containing this <see cref="Result{TOk, TError}"/> if it is <c>Ok</c>, the alternative result if it is <c>Ok</c>, otherwise a <see cref="ValueTask"/> containing a <see cref="Result{TOk, TError}"/> with a tuple of both errors.</returns>
     [GenerateAsyncExtension]
-    public Task<Result<TOk, (TError Left, TOther Right)>> Or<TOther>(Func<Task<Result<TOk, TOther>>> otherProviderAsync) =>
-        Recover(async error => (await otherProviderAsync()).MapError(otherError => (error, otherError)));
+    public ValueTask<Result<TOk, (TError Left, TOther Right)>> Or<TOther>(Func<ValueTask<Result<TOk, TOther>>> otherProviderAsync) =>
+        Recover(async error => (await otherProviderAsync().ConfigureAwait(false)).MapError(otherError => (error, otherError)));
 
     /// <summary>
     /// Swaps the success and error types of this <see cref="Result{TOk, TError}"/>.
@@ -309,12 +309,12 @@ public abstract partial record Result<TOk, TError>
     /// Useful for async logging, debugging, or performing async side effects without modifying the <see cref="Result{TOk, TError}"/>.
     /// </summary>
     /// <param name="tapperAsync">An async action to perform on the success value if it exists.</param>
-    /// <returns>A <see cref="Task"/> containing the original <see cref="Result{TOk, TError}"/> unchanged.</returns>
+    /// <returns>A <see cref="ValueTask"/> containing the original <see cref="Result{TOk, TError}"/> unchanged.</returns>
     [GenerateAsyncExtension]
-    public Task<Result<TOk, TError>> Tap(Func<TOk, Task> tapperAsync) =>
+    public ValueTask<Result<TOk, TError>> Tap(Func<TOk, ValueTask> tapperAsync) =>
         Map(async ok =>
         {
-            await tapperAsync(ok);
+            await tapperAsync(ok).ConfigureAwait(false);
             return ok;
         });
 
@@ -337,12 +337,12 @@ public abstract partial record Result<TOk, TError>
     /// Useful for async logging, debugging, or performing async side effects on errors without modifying the <see cref="Result{TOk, TError}"/>.
     /// </summary>
     /// <param name="tapperAsync">An async action to perform on the error value if it exists.</param>
-    /// <returns>A <see cref="Task"/> containing the original <see cref="Result{TOk, TError}"/> unchanged.</returns>
+    /// <returns>A <see cref="ValueTask"/> containing the original <see cref="Result{TOk, TError}"/> unchanged.</returns>
     [GenerateAsyncExtension]
-    public Task<Result<TOk, TError>> TapError(Func<TError, Task> tapperAsync) =>
+    public ValueTask<Result<TOk, TError>> TapError(Func<TError, ValueTask> tapperAsync) =>
         MapError(async error =>
         {
-            await tapperAsync(error);
+            await tapperAsync(error).ConfigureAwait(false);
             return error;
         });
 
@@ -364,11 +364,11 @@ public abstract partial record Result<TOk, TError>
     /// This is a safe way to get a value from a <see cref="Result{TOk, TError}"/> without risking exceptions.
     /// </summary>
     /// <param name="defaultProviderAsync">An async function that transforms the error value to a success value when the <see cref="Result{TOk, TError}"/> is <c>Error</c>.</param>
-    /// <returns>A <see cref="Task"/> containing the success value if the <see cref="Result{TOk, TError}"/> is <c>Ok</c>, otherwise a <see cref="Task"/> containing the result of calling the async default provider with the error.</returns>
+    /// <returns>A <see cref="ValueTask"/> containing the success value if the <see cref="Result{TOk, TError}"/> is <c>Ok</c>, otherwise a <see cref="ValueTask"/> containing the result of calling the async default provider with the error.</returns>
     [GenerateAsyncExtension]
-    public Task<TOk> UnwrapOr(Func<TError, Task<TOk>> defaultProviderAsync) =>
+    public ValueTask<TOk> UnwrapOr(Func<TError, ValueTask<TOk>> defaultProviderAsync) =>
         Match(
-            Task.FromResult,
+            ok => new ValueTask<TOk>(ok),
             defaultProviderAsync
         );
 
@@ -390,11 +390,11 @@ public abstract partial record Result<TOk, TError>
     /// </summary>
     /// <typeparam name="TException">The type of exception to throw. Must inherit from <see cref="Exception"/>.</typeparam>
     /// <param name="exceptionProviderAsync">An async function that creates an exception from the error value when the <see cref="Result{TOk, TError}"/> is <c>Error</c>.</param>
-    /// <returns>A <see cref="Task"/> containing the success value if the <see cref="Result{TOk, TError}"/> is <c>Ok</c>.</returns>
+    /// <returns>A <see cref="ValueTask"/> containing the success value if the <see cref="Result{TOk, TError}"/> is <c>Ok</c>.</returns>
     /// <exception cref="Exception">Throws the exception created by <paramref name="exceptionProviderAsync"/> when the <see cref="Result{TOk, TError}"/> is <c>Error</c>.</exception>
     [GenerateAsyncExtension]
-    public Task<TOk> UnwrapOrThrow<TException>(Func<TError, Task<TException>> exceptionProviderAsync) where TException : Exception =>
-        UnwrapOr(async error => throw await exceptionProviderAsync(error));
+    public ValueTask<TOk> UnwrapOrThrow<TException>(Func<TError, ValueTask<TException>> exceptionProviderAsync) where TException : Exception =>
+        UnwrapOr(async error => throw await exceptionProviderAsync(error).ConfigureAwait(false));
 
     /// <summary>
     /// Safely casts the success value to the specified type if the <see cref="Result{TOk, TError}"/> is <c>Ok</c>.
@@ -785,12 +785,12 @@ public static class Result
     /// <typeparam name="TOk">The type of the success values.</typeparam>
     /// <typeparam name="TError">The type of the error values.</typeparam>
     /// <param name="results">The async sequence of results to combine.</param>
-    /// <returns>A <see cref="Task{T}"/> containing either <c>Ok</c> with all success values, or the first error encountered.</returns>
-    public static async Task<Result<ImmutableArray<TOk>, TError>> All<TOk, TError>(IAsyncEnumerable<Result<TOk, TError>> results)
+    /// <returns>A <see cref="ValueTask{T}"/> containing either <c>Ok</c> with all success values, or the first error encountered.</returns>
+    public static async ValueTask<Result<ImmutableArray<TOk>, TError>> All<TOk, TError>(IAsyncEnumerable<Result<TOk, TError>> results)
     {
         var okValues = ImmutableArray.CreateBuilder<TOk>();
 
-        await foreach (var result in results)
+        await foreach (var result in results.ConfigureAwait(false))
         {
             if (result.TryUnwrapError(out var error))
             {
@@ -811,14 +811,14 @@ public static class Result
     /// <typeparam name="TOk">The type of the success values.</typeparam>
     /// <typeparam name="TError">The type of the error values.</typeparam>
     /// <param name="resultProvidersAsync">The collection of async functions that provide results when executed.</param>
-    /// <returns>A <see cref="Task{T}"/> containing either <c>Ok</c> with all success values, or the first error encountered.</returns>
-    public static async Task<Result<ImmutableArray<TOk>, TError>> All<TOk, TError>(params IEnumerable<Func<Task<Result<TOk, TError>>>> resultProvidersAsync)
+    /// <returns>A <see cref="ValueTask{T}"/> containing either <c>Ok</c> with all success values, or the first error encountered.</returns>
+    public static async ValueTask<Result<ImmutableArray<TOk>, TError>> All<TOk, TError>(params IEnumerable<Func<ValueTask<Result<TOk, TError>>>> resultProvidersAsync)
     {
         var okValues = ImmutableArray.CreateBuilder<TOk>();
 
         foreach (var resultProviderAsync in resultProvidersAsync)
         {
-            var result = await resultProviderAsync();
+            var result = await resultProviderAsync().ConfigureAwait(false);
 
             if (result.TryUnwrapError(out var error))
             {
@@ -839,12 +839,12 @@ public static class Result
     /// <typeparam name="TOk">The type of the success values.</typeparam>
     /// <typeparam name="TError">The type of the error values.</typeparam>
     /// <param name="results">The async sequence of results to search.</param>
-    /// <returns>A <see cref="Task{T}"/> containing either the first success value, or all error values if none succeed.</returns>
-    public static async Task<Result<TOk, ImmutableArray<TError>>> Any<TOk, TError>(IAsyncEnumerable<Result<TOk, TError>> results)
+    /// <returns>A <see cref="ValueTask{T}"/> containing either the first success value, or all error values if none succeed.</returns>
+    public static async ValueTask<Result<TOk, ImmutableArray<TError>>> Any<TOk, TError>(IAsyncEnumerable<Result<TOk, TError>> results)
     {
         var errors = ImmutableArray.CreateBuilder<TError>();
 
-        await foreach (var result in results)
+        await foreach (var result in results.ConfigureAwait(false))
         {
             if (result.TryUnwrap(out var okValue))
             {
@@ -865,14 +865,14 @@ public static class Result
     /// <typeparam name="TOk">The type of the success values.</typeparam>
     /// <typeparam name="TError">The type of the error values.</typeparam>
     /// <param name="resultProvidersAsync">The collection of async functions that provide results when executed.</param>
-    /// <returns>A <see cref="Task{T}"/> containing either the first success value, or all error values if none succeed.</returns>
-    public static async Task<Result<TOk, ImmutableArray<TError>>> Any<TOk, TError>(params IEnumerable<Func<Task<Result<TOk, TError>>>> resultProvidersAsync)
+    /// <returns>A <see cref="ValueTask{T}"/> containing either the first success value, or all error values if none succeed.</returns>
+    public static async ValueTask<Result<TOk, ImmutableArray<TError>>> Any<TOk, TError>(params IEnumerable<Func<ValueTask<Result<TOk, TError>>>> resultProvidersAsync)
     {
         var errors = ImmutableArray.CreateBuilder<TError>();
 
         foreach (var resultProviderAsync in resultProvidersAsync)
         {
-            var result = await resultProviderAsync();
+            var result = await resultProviderAsync().ConfigureAwait(false);
 
             if (result.TryUnwrap(out var ok))
             {
