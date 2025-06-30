@@ -6,9 +6,6 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Editing;
 using System.Collections.Immutable;
 using System.Composition;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace FunctionJunction.Generator.CodeFixes;
 
@@ -44,7 +41,7 @@ internal class AddPartialModifierFixProvider : CodeFixProvider
     }
 
     private static async Task<Document> AddPartial(
-        Document document, 
+        Document document,
         TypeDeclarationSyntax declaration,
         CancellationToken cancellationToken = default
     )

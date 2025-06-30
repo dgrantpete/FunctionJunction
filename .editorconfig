@@ -1,8 +1,11 @@
+[*.{cs,csproj,props,targets,slnx}]
+insert_final_newline = true
+
 [*.cs]
-csharp_style_namespace_declarations = file_scoped:error
+csharp_style_namespace_declarations = file_scoped:warning
 indent_style = space
 end_of_line = crlf
 
-[*.csproj]
+[*.{csproj,props,targets,slnx}]
 indent_style = tab
 end_of_line = crlf

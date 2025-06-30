@@ -23,7 +23,7 @@ public static class Iterator
     /// var powersOfTwo = Iterator.Iterate(() => 1, x => x * 2).Take(5);
     /// </code>
     /// </remarks>
-    public static IEnumerable<T> Iterate<T>(Func<T> seedProvider, Func<T, T> iterator) => 
+    public static IEnumerable<T> Iterate<T>(Func<T> seedProvider, Func<T, T> iterator) =>
         new FunctionEnumerable<T>(() => new IteratorEnumerator<T>(seedProvider, iterator));
 
     /// <summary>
@@ -41,7 +41,7 @@ public static class Iterator
     /// var powersOfThree = Iterator.Iterate(async () => 1, async x => await SomeAsyncOperation(x * 3));
     /// </code>
     /// </remarks>
-    public static IAsyncEnumerable<T> Iterate<T>(Func<ValueTask<T>> seedProviderAsync, Func<T, ValueTask<T>> iteratorAsync) => 
+    public static IAsyncEnumerable<T> Iterate<T>(Func<ValueTask<T>> seedProviderAsync, Func<T, ValueTask<T>> iteratorAsync) =>
         new FunctionEnumerableAsync<T>(cancellationToken => new IteratorAsyncEnumerator<T>(seedProviderAsync, iteratorAsync, cancellationToken));
 
     private class FunctionEnumerable<T>(Func<IEnumerator<T>> enumeratorProvider) : IEnumerable<T>
@@ -53,7 +53,7 @@ public static class Iterator
 
     private class FunctionEnumerableAsync<T>(Func<CancellationToken, IAsyncEnumerator<T>> asyncEnumeratorProvider) : IAsyncEnumerable<T>
     {
-        public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken = default) => 
+        public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken = default) =>
             asyncEnumeratorProvider(cancellationToken);
     }
 

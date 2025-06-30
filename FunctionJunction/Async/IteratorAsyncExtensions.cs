@@ -100,7 +100,7 @@ public static class IteratorAsyncExtensions
             yield return current;
         }
     }
-    
+
     /// <summary>
     /// Asynchronously applies a synchronous accumulator function over a sequence, using the first element as the seed and returning each intermediate result.
     /// If the sequence is empty, returns an empty <see cref="IAsyncEnumerable{T}"/>.

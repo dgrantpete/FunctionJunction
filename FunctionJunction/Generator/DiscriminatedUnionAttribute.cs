@@ -1,6 +1,4 @@
-﻿using System;
-
-#if MAIN_PROJECT
+﻿#if MAIN_PROJECT
 namespace FunctionJunction.Generator;
 #else
 namespace FunctionJunction.Generator.Internal.Attributes;

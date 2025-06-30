@@ -10,7 +10,7 @@
 		<RepositoryType>git</RepositoryType>
 		<Description>Opinionated functional helpers for C# that keep your railway-oriented code on track.</Description>
 		<PackageTags>functional;railway;source-generator;linq;discriminated-union</PackageTags>
-		
+
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<IncludeSymbols>true</IncludeSymbols>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
@@ -22,10 +22,10 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<None Include="../FunctionJunction.png" Pack="true" PackagePath="" Visible="false" />
-		<None Include="../README.md" Pack="true" PackagePath="" Visible="false" />
+		<None Include="../FunctionJunction.png" Pack="true" PackagePath="" Visible="false"/>
+		<None Include="../README.md" Pack="true" PackagePath="" Visible="false"/>
 	</ItemGroup>
-	
+
 	<PropertyGroup>
 		<TargetFramework>netstandard2.0</TargetFramework>
 		<DefineConstants>$(DefineConstants);MAIN_PROJECT</DefineConstants>
@@ -42,9 +42,9 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="System.Collections.Immutable" Version="9.0.6" />
-		<PackageReference Include="System.Diagnostics.Tools" Version="4.3.0" />
-		<PackageReference Include="System.Linq.AsyncEnumerable" Version="10.0.0-preview.5.25277.114" />
+		<PackageReference Include="System.Collections.Immutable" Version="9.0.6"/>
+		<PackageReference Include="System.Diagnostics.Tools" Version="4.3.0"/>
+		<PackageReference Include="System.Linq.AsyncEnumerable" Version="10.0.0-preview.5.25277.114"/>
 		<PackageReference Include="PolySharp" Version="1.15.0">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -52,18 +52,18 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\FunctionJunction.Generator\FunctionJunction.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+		<ProjectReference Include="..\FunctionJunction.Generator\FunctionJunction.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all"/>
 	</ItemGroup>
 
 	<ItemGroup>
-		<None Include="FunctionJunction.props" Pack="true" PackagePath="build/" />
-		<None Include="FunctionJunction.props" Pack="true" PackagePath="buildTransitive/" />
+		<None Include="../FunctionJunction.props" Pack="true" PackagePath="build/" Visible="false"/>
+		<None Include="../FunctionJunction.props" Pack="true" PackagePath="buildTransitive/" Visible="false"/>
 	</ItemGroup>
 
 	<ItemGroup>
-		<CompilerVisibleProperty Include="FunctionJunction_Defaults_GeneratePolymorphicSerialization" />
-		<CompilerVisibleProperty Include="FunctionJunction_Defaults_MatchOn" />
-		<CompilerVisibleProperty Include="FunctionJunction_Defaults_GeneratePrivateConstructor" />
+		<CompilerVisibleProperty Include="FunctionJunction_Defaults_GeneratePolymorphicSerialization"/>
+		<CompilerVisibleProperty Include="FunctionJunction_Defaults_MatchOn"/>
+		<CompilerVisibleProperty Include="FunctionJunction_Defaults_GeneratePrivateConstructor"/>
 	</ItemGroup>
 
 	<Target Name="PackAnalyzers" DependsOnTargets="ResolveProjectReferences;ResolvePackageDependenciesDesignTime" BeforeTargets="_GetPackageFiles">

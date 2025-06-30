@@ -46,13 +46,13 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
                 value.GroupBy(
                     methodInfo => CreateClassGroup(methodInfo, cancellationToken),
                     (methodInfo) => new MethodRenderContext(
-                        CreateMethodModel(methodInfo, cancellationToken), 
+                        CreateMethodModel(methodInfo, cancellationToken),
                         methodInfo.FilePath,
                         methodInfo.Namespace
                     ),
                     static (classGroup, methodContexts) =>
                     (
-                        classGroup, 
+                        classGroup,
                         methodContexts.ToEquatableArray()
                     )
                 )

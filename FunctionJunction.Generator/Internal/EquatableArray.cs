@@ -19,7 +19,7 @@ internal readonly record struct EquatableArray<T>(ImmutableArray<T> Array) : IRe
     {
         unchecked
         {
-            int hash = 17;
+            var hash = 17;
             foreach (var element in Array)
             {
                 hash = hash * 31 + (element?.GetHashCode() ?? 0);

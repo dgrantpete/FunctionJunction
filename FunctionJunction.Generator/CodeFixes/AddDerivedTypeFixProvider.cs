@@ -8,9 +8,6 @@ using Microsoft.CodeAnalysis.Editing;
 using Microsoft.CodeAnalysis.Formatting;
 using System.Collections.Immutable;
 using System.Composition;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace FunctionJunction.Generator.CodeFixes;
 
@@ -46,7 +43,7 @@ internal class AddDerivedTypeFixProvider : CodeFixProvider
     }
 
     private static async Task<Document> AddDerivedType(
-        Document document, 
+        Document document,
         TypeDeclarationSyntax declaration,
         CancellationToken cancellationToken = default
     )

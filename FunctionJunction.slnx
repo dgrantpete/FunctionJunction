@@ -1,7 +1,9 @@
 <Solution>
   <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
     <File Path="Directory.Build.props" />
     <File Path="FunctionJunction.png" />
+    <File Path="FunctionJunction.props" />
     <File Path="LICENSE.txt" />
     <File Path="README.md" />
   </Folder>

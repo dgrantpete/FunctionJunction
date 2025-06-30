@@ -39,7 +39,7 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var projectAttributeDefaultsProvider = context.AnalyzerConfigOptionsProvider
-            .Select((options, cancellationToken) => 
+            .Select((options, cancellationToken) =>
                 GetDefaultAttributeInfo(options.GlobalOptions, cancellationToken)
             );
 
@@ -85,8 +85,8 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
     #region Data Extraction
 
     private static UnionInfo? GetUnionInfo(
-        GeneratorAttributeSyntaxContext context, 
-        ConstantSymbols constantSymbols, 
+        GeneratorAttributeSyntaxContext context,
+        ConstantSymbols constantSymbols,
         CancellationToken cancellationToken = default
     )
     {
@@ -149,7 +149,7 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
 
         var maybeDeconstructSymbol = memberSymbol.GetMembers()
             .OfType<IMethodSymbol>()
-            .FirstOrDefault(methodSymbol => 
+            .FirstOrDefault(methodSymbol =>
                 methodSymbol is { ReturnsVoid: true, Name: "Deconstruct", IsGenericMethod: false }
             );
 
@@ -197,7 +197,7 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
 
         var unionArguments = attribute.NamedArguments
             .ToImmutableDictionary(
-                argument => argument.Key, 
+                argument => argument.Key,
                 TypedConstant? (argument) => argument.Value
             );
 
@@ -222,20 +222,20 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
     private static AttributeInfo GetDefaultAttributeInfo(AnalyzerConfigOptions options, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        
+
         options.TryGetValue(
-            $"build_property.FunctionJunction_Defaults_{nameof(DiscriminatedUnionAttribute.MatchOn)}", 
-            out string? match
+            $"build_property.FunctionJunction_Defaults_{nameof(DiscriminatedUnionAttribute.MatchOn)}",
+            out var match
         );
 
         options.TryGetValue(
-            $"build_property.FunctionJunction_Defaults_{nameof(DiscriminatedUnionAttribute.GeneratePolymorphicSerialization)}", 
-            out string? polymorphicSerialization
+            $"build_property.FunctionJunction_Defaults_{nameof(DiscriminatedUnionAttribute.GeneratePolymorphicSerialization)}",
+            out var polymorphicSerialization
         );
 
         options.TryGetValue(
-            $"build_property.FunctionJunction_Defaults_{nameof(DiscriminatedUnionAttribute.GeneratePrivateConstructor)}", 
-            out string? privateConstructor
+            $"build_property.FunctionJunction_Defaults_{nameof(DiscriminatedUnionAttribute.GeneratePrivateConstructor)}",
+            out var privateConstructor
         );
 
         return new()
@@ -252,7 +252,7 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
                 return null;
             }
 
-            if (!bool.TryParse(text, out bool value))
+            if (!bool.TryParse(text, out var value))
             {
                 return null;
             }
@@ -343,7 +343,7 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
     }
 
     private static ImmutableArray<MatchRenderModel> CreateMatchModel(
-        IEnumerable<MemberRenderContext> memberContexts, 
+        IEnumerable<MemberRenderContext> memberContexts,
         RenderContext context,
         CancellationToken cancellationToken = default
     )
@@ -473,8 +473,8 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
         cancellationToken.ThrowIfCancellationRequested();
 
         if (
-            !context.Settings.GeneratePolymorphicSerialization 
-                || context.Symbols.JsonDerivedTypeAttribute is not { }derivedTypeAttributeSymbol
+            !context.Settings.GeneratePolymorphicSerialization
+                || context.Symbols.JsonDerivedTypeAttribute is not { } derivedTypeAttributeSymbol
         )
         {
             return [];
@@ -490,7 +490,7 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
 
     private static class DisplayFormat
     {
-        public static SymbolDisplayFormat Qualified { get; } = 
+        public static SymbolDisplayFormat Qualified { get; } =
             new(
                 typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces,
                 genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters
@@ -538,8 +538,8 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
     );
 
     private readonly record struct RenderContext(
-        Compilation Compilation, 
-        ConstantSymbols Symbols, 
+        Compilation Compilation,
+        ConstantSymbols Symbols,
         AttributeSettings Settings
     );
 
@@ -615,7 +615,7 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
         public TSymbol Resolve(Compilation compilation)
         {
             if (
-                ForeignId is { } foreignId 
+                ForeignId is { } foreignId
                     && typeof(TSymbol) == typeof(IParameterSymbol)
                     && GetSymbolInternal<IMethodSymbol>(Id, Type, compilation) is { } methodSymbol
             )
@@ -652,7 +652,7 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
             var symbolId = DocumentationCommentId.CreateReferenceId(symbol);
 
             if (
-                symbolId is "" 
+                symbolId is ""
                     && symbol is IParameterSymbol { ContainingSymbol: IMethodSymbol methodSymbol } parameterSymbol
                     && DocumentationCommentId.CreateDeclarationId(methodSymbol) is { } methodSymbolId
             )

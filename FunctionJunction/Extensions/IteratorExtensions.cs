@@ -108,8 +108,8 @@ public static class IteratorExtensions
     /// // Results in: [1, 42] (only successfully parsed integers)
     /// </code>
     /// </remarks>
-    public static IEnumerable<TResult> SelectWhere<TSource, TResult>(this IEnumerable<TSource> source, Func<TSource, Option<TResult>> conditionalSelector) 
-        where TResult : notnull 
+    public static IEnumerable<TResult> SelectWhere<TSource, TResult>(this IEnumerable<TSource> source, Func<TSource, Option<TResult>> conditionalSelector)
+        where TResult : notnull
     =>
         source.SelectMany(item =>
             conditionalSelector(item).ToEnumerable()

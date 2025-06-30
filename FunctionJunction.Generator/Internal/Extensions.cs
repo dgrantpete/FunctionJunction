@@ -1,8 +1,5 @@
 ﻿using Microsoft.CodeAnalysis;
-using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
 
 namespace FunctionJunction.Generator.Internal;
 
@@ -17,6 +14,60 @@ internal static class Extensions
             { } value => Enumerable.Repeat(value, 1),
             null => []
         });
+
+    public static IncrementalValuesProvider<T> WhereOk<T>(
+    this IncrementalValueProvider<GeneratorResult<T>> provider,
+    IncrementalGeneratorInitializationContext context
+)
+    {
+        var diagnosticProvider = provider
+            .Select((result, _) => result.Diagnostics);
+
+        context.RegisterSourceOutput(
+            diagnosticProvider,
+            (context, diagnostics) =>
+            {
+                foreach (var diagnostic in diagnostics)
+                {
+                    context.ReportDiagnostic(diagnostic);
+                }
+            }
+        );
+
+        return provider.SelectMany((result, _) => result switch
+        {
+            // The only way "IsSuccess" could be true is if "Value" was explicitly provided, so its value should never be default
+            // (unless explicitly set incorrectly)
+            { IsSuccess: true } => ImmutableArray.Create(result.Value!),
+            _ => []
+        });
+    }
+
+    public static IncrementalValuesProvider<T> WhereOk<T>(
+        this IncrementalValuesProvider<GeneratorResult<T>> provider,
+        IncrementalGeneratorInitializationContext context
+    )
+    {
+        var diagnosticProvider = provider
+            .Select((result, _) => result.Diagnostics);
+
+        context.RegisterSourceOutput(
+            diagnosticProvider,
+            (context, diagnostics) =>
+            {
+                foreach (var diagnostic in diagnostics)
+                {
+                    context.ReportDiagnostic(diagnostic);
+                }
+            }
+        );
+
+        return provider.SelectMany((result, _) => result switch
+        {
+            { IsSuccess: true } => ImmutableArray.Create(result.Value!),
+            _ => []
+        });
+    }
 
     public static ImmutableArray<TResult>? SelectAll<T, TResult>(this IEnumerable<T> source, Func<T, TResult?> selector) where TResult : class
     {

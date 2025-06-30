@@ -52,7 +52,7 @@ public readonly record struct Option<T> where T : notnull
     public TResult Match<TResult>(
         Func<T, TResult> onSome,
         Func<TResult> onNone
-    ) => 
+    ) =>
         IsSome switch
         {
             true => onSome(internalValue),
@@ -183,7 +183,7 @@ public readonly record struct Option<T> where T : notnull
     /// <returns>A <see cref="ValueTask"/> containing an <see cref="Option{T}"/> with a tuple of both values if both are <c>Some</c>, otherwise a <see cref="ValueTask"/> containing <c>None</c>.</returns>
     [GenerateAsyncExtension]
     public ValueTask<Option<(T Left, TOther Right)>> And<TOther>(Func<ValueTask<Option<TOther>>> otherProviderAsync) where TOther : notnull =>
-        FlatMap(async value => 
+        FlatMap(async value =>
             (await otherProviderAsync().ConfigureAwait(false))
                 .Map(otherValue => (value, otherValue))
         );
@@ -301,8 +301,8 @@ public readonly record struct Option<T> where T : notnull
     /// <returns>The contained value if the <see cref="Option{T}"/> is <c>Some</c>.</returns>
     /// <exception cref="InvalidOperationException">Thrown when the <see cref="Option{T}"/> is <c>None</c>.</exception>
     [GenerateAsyncExtension]
-    public T UnwrapOrThrow() => 
-        UnwrapOrThrow(() => 
+    public T UnwrapOrThrow() =>
+        UnwrapOrThrow(() =>
             new InvalidOperationException($"Could not unwrap 'Option<{typeof(T).Name}>' because it doesn't contain a maybeValue")
         );
 
@@ -652,7 +652,7 @@ public static class Option
 
         return values.DrainToImmutable();
     }
-     
+
     /// <summary>
     /// Asynchronously finds the first <c>Some</c> value from a sequence of <see cref="Option{T}"/> values.
     /// Returns the first <see cref="Option{T}"/> that contains a value, or <c>None</c> if all <see cref="Option{T}"/> values are <c>None</c>.

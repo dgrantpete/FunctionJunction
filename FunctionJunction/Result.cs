@@ -65,7 +65,7 @@ public abstract partial record Result<TOk, TError>
         {
             Value = value;
         }
-        
+
         /// <summary>
         /// Deconstructs this <c>Error</c> result into its contained error value.
         /// </summary>
@@ -80,14 +80,14 @@ public abstract partial record Result<TOk, TError>
     /// Implicitly converts a <typeparamref name="TOk"/> into an <c>Ok</c> value inside a <see cref="Result{TOk, TError}"/>.
     /// </summary>
     /// <param name="ok">The value being converted.</param>
-    public static implicit operator Result<TOk, TError>(TOk ok) => 
+    public static implicit operator Result<TOk, TError>(TOk ok) =>
         new Result<TOk, TError>.Ok(ok);
 
     /// <summary>
     /// Implicitly converts a <typeparamref name="TError"/> into an <c>Error</c> value inside a <see cref="Result{TOk, TError}"/>.
     /// </summary>
     /// <param name="error">The value being converted.</param>
-    public static implicit operator Result<TOk, TError>(TError error) => 
+    public static implicit operator Result<TOk, TError>(TError error) =>
         new Result<TOk, TError>.Error(error);
 
     /// <summary>
@@ -127,7 +127,7 @@ public abstract partial record Result<TOk, TError>
     /// <returns>A <see cref="Result{TOk, TError}"/> containing the transformed success value if this <see cref="Result{TOk, TError}"/> is <c>Ok</c>, otherwise the original error.</returns>
     [GenerateAsyncExtension]
     public Result<TResult, TError> Map<TResult>(Func<TOk, TResult> mapper) =>
-        FlatMap(ok => 
+        FlatMap(ok =>
             NewOk(mapper(ok))
         );
 
