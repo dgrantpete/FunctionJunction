@@ -12,6 +12,34 @@ namespace FunctionJunction.Extensions;
 public static class OptionExtensions
 {
     /// <summary>
+    /// Creates an <see cref="Option{T}"/> based on the provided <paramref name="condition"/>, calling <paramref name="valueProvider"/> and wrapping it in a <c>Some</c> value if it's <see langword="true"/> and <c>None</c> if it's <see langword="false"/>.
+    /// </summary>
+    /// <param name="condition">Condition used to determine if the returned value should be <c>Some</c> or <c>None</c>.</param>
+    /// <param name="valueProvider">The function called when <paramref name="condition"/> is <see langword="true"/>.</param>
+    /// <returns>A <c>Some</c> value when <paramref name="condition"/> is <see langword="true"/>, otherwise <c>None</c>.</returns>
+    [GenerateAsyncExtension]
+    public static Option<T> ToOption<T>(this bool condition, Func<T> valueProvider) where T : notnull =>
+        condition switch
+        {
+            true => valueProvider(),
+            false => default(Option<T>)
+        };
+
+    /// <summary>
+    /// Creates an <see cref="Option{T}"/> based on the provided <paramref name="condition"/>, asyncronously calling <paramref name="valueProviderAsync"/> and wrapping it in a <c>Some</c> value if it's <see langword="true"/> and <c>None</c> if it's <see langword="false"/>.
+    /// </summary>
+    /// <param name="condition">Condition used to determine if the returned value should be <c>Some</c> or <c>None</c>.</param>
+    /// <param name="valueProviderAsync">The asyncronous function called when <paramref name="condition"/> is <see langword="true"/>.</param>
+    /// <returns>A <see cref="ValueTask"/> containing <c>Some</c> value when <paramref name="condition"/> is <see langword="true"/>, otherwise <c>None</c>.</returns>
+    [GenerateAsyncExtension]
+    public static async ValueTask<Option<T>> ToOption<T>(this bool condition, Func<ValueTask<T>> valueProviderAsync) where T : notnull =>
+        condition switch
+        {
+            true => await valueProviderAsync(),
+            false => default(Option<T>)
+        };
+
+    /// <summary>
     /// Applies a function that returns an <see cref="Option{T}"/> to the tuple elements inside this <see cref="Option{T}"/>, flattening the result.
     /// This allows working with tuple components directly without manual deconstruction.
     /// </summary>
