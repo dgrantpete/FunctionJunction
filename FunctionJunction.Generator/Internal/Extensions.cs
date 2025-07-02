@@ -1,5 +1,6 @@
 ﻿using Microsoft.CodeAnalysis;
 using System.Collections.Immutable;
+using static FunctionJunction.Generator.Internal.GeneratorResult;
 
 namespace FunctionJunction.Generator.Internal;
 
@@ -16,9 +17,9 @@ internal static class Extensions
         });
 
     public static IncrementalValuesProvider<T> WhereOk<T>(
-    this IncrementalValueProvider<GeneratorResult<T>> provider,
-    IncrementalGeneratorInitializationContext context
-)
+        this IncrementalValueProvider<GeneratorResult<T>> provider,
+        IncrementalGeneratorInitializationContext context
+    )
     {
         var diagnosticProvider = provider
             .Select((result, _) => result.Diagnostics);
