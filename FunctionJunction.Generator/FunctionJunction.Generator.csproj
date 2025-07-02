@@ -22,7 +22,7 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 	</ItemGroup>
-
+	
 	<ItemGroup>
 		<EmbeddedResource Include="Templates/*.sbn" />
 		<Compile Include="../FunctionJunction/Generator/*.cs" Link="Internal/Attributes/%(Filename)%(Extension)" />

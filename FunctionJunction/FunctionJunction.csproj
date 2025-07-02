@@ -64,7 +64,7 @@
 		<CompilerVisibleProperty Include="FunctionJunction_Defaults_MatchOn"/>
 		<CompilerVisibleProperty Include="FunctionJunction_Defaults_GeneratePrivateConstructor"/>
 	</ItemGroup>
-
+	
 	<Target Name="PackAnalyzers" DependsOnTargets="ResolveProjectReferences;ResolvePackageDependenciesDesignTime" BeforeTargets="_GetPackageFiles">
 		<ItemGroup>
 			<None Include="@(Analyzer)" Condition="$([System.String]::Copy('%(Filename)').StartsWith('FunctionJunction'))">
