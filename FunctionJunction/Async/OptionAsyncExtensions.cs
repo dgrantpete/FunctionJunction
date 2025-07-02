@@ -1,4 +1,5 @@
-﻿using static FunctionJunction.Prelude;
+﻿using System.ComponentModel;
+using static FunctionJunction.Prelude;
 
 namespace FunctionJunction.Async;
 
@@ -42,6 +43,7 @@ public static partial class OptionAsyncExtensions
 /// <summary>
 /// Asyncronous extension methods specific to <see cref="Option{T}"/> which contain a value type.
 /// </summary>
+[EditorBrowsable(EditorBrowsableState.Never)]
 public static partial class ValueOptionAsyncExtensions
 {
 
