@@ -1,5 +1,6 @@
 ﻿using FunctionJunction.Generator;
 using System.Collections.Immutable;
+using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using static FunctionJunction.Prelude;
 
@@ -587,23 +588,6 @@ public static class Result
         );
 
     /// <summary>
-    /// Converts a <see cref="Result{TOk, TError}"/> to a nullable value type.
-    /// If the <see cref="Result{TOk, TError}"/> is <c>Ok</c>, returns the success value.
-    /// If the <see cref="Result{TOk, TError}"/> is <c>Error</c>, returns <see langword="null"/>.
-    /// Useful for interoperating with APIs that expect nullable value types.
-    /// </summary>
-    /// <typeparam name="TOk">The value type to extract from the <see cref="Result{TOk, TError}"/>.</typeparam>
-    /// <typeparam name="TError">The type of the error value.</typeparam>
-    /// <param name="result">The <see cref="Result{TOk, TError}"/> to convert.</param>
-    /// <returns>The success value if <c>Ok</c>, otherwise <see langword="null"/>.</returns>
-    [GenerateAsyncExtension]
-    public static TOk? UnwrapNullableValue<TOk, TError>(this Result<TOk, TError> result) where TOk : struct =>
-        result.Match(
-            value => value,
-            TOk? (_) => null
-        );
-
-    /// <summary>
     /// Extracts the success value from the <see cref="Result{TOk, TError}"/> if it contains one, otherwise throws an <see cref="InvalidOperationException"/> with a default message.
     /// This is a convenience method for when you want to treat an error as an exceptional case with a standard error message that includes the error details.
     /// </summary>
@@ -884,4 +868,31 @@ public static class Result
 
         return errors.DrainToImmutable();
     }
+}
+
+/// <summary>
+/// <para>A static class which houses extension methods for <see cref="Result{TOk, TError}"/> where the contained value is a <see langword="struct"/>.</para>
+/// <para>This exists separately from <see cref="Result"/> so the same method name (i.e. <c>UnwrapNullable</c>) 
+/// can have implementations for both value types and reference types without conflicts.</para>
+/// </summary>
+[EditorBrowsable(EditorBrowsableState.Never)]
+[GenerateAsyncExtension(ExtensionClassName = "ValueResultAsyncExtensions", Namespace = "FunctionJunction.Async")]
+public static class ValueResult
+{
+    /// <summary>
+    /// Converts a <see cref="Result{TOk, TError}"/> to a nullable value type.
+    /// If the <see cref="Result{TOk, TError}"/> is <c>Ok</c>, returns the success value.
+    /// If the <see cref="Result{TOk, TError}"/> is <c>Error</c>, returns <see langword="null"/>.
+    /// Useful for interoperating with APIs that expect nullable value types.
+    /// </summary>
+    /// <typeparam name="TOk">The value type to extract from the <see cref="Result{TOk, TError}"/>.</typeparam>
+    /// <typeparam name="TError">The type of the error value.</typeparam>
+    /// <param name="result">The <see cref="Result{TOk, TError}"/> to convert.</param>
+    /// <returns>The success value if <c>Ok</c>, otherwise <see langword="null"/>.</returns>
+    [GenerateAsyncExtension]
+    public static TOk? UnwrapNullable<TOk, TError>(this Result<TOk, TError> result) where TOk : struct =>
+        result.Match(
+            value => value,
+            TOk? (_) => null
+        );
 }

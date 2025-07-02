@@ -1,5 +1,6 @@
 ﻿using FunctionJunction.Generator;
 using System.Collections.Immutable;
+using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using static FunctionJunction.Prelude;
 
@@ -366,6 +367,58 @@ public static class Option
     public static Option<T> Some<T>(T value) where T : notnull => new(value);
 
     /// <summary>
+    /// Deconstructs an <see cref="Option{T}"/> into a nullable reference type <typeparamref name="T"/>. Enables pattern matching directly on <see cref="Option{T}"/>.
+    /// </summary>
+    /// <typeparam name="T">The type of the value in the <see cref="Option{T}"/>. Must be non-null.</typeparam>
+    /// <param name="option">The <see cref="Option{T}"/> to be deconstructed.</param>
+    /// <param name="value">The nullable value being returned.</param>
+    /// <remarks>
+    /// <code>
+    /// Option&lt;string&gt; referenceOption = ...;
+    /// 
+    /// if (referenceOption is Option&lt;string&gt;({ } notNullString))
+    /// {
+    ///     ...
+    /// }
+    /// </code>
+    /// </remarks>
+    public static void Deconstruct<T>(this Option<T> option, out T? value) where T : class
+    {
+        value = null;
+
+        if (option.TryUnwrap(out var maybeValue))
+        {
+            value = maybeValue;
+        }
+    }
+
+    /// <summary>
+    /// Deconstructs an <see cref="Option{T}"/> into a nullable reference type <see cref="Nullable{T}"/>. Enables pattern matching directly on <see cref="Option{T}"/>.
+    /// </summary>
+    /// <typeparam name="T">The type of the value in the <see cref="Option{T}"/>. Must be non-null.</typeparam>
+    /// <param name="option">The <see cref="Option{T}"/> to be deconstructed.</param>
+    /// <param name="value">The nullable value being returned.</param>
+    /// <remarks>
+    /// <code>
+    /// Option&lt;int&gt; valueOption = ...;
+    /// 
+    /// if (valueOption is Option&lt;int&gt;({ } notNullInt))
+    /// {
+    ///     ...
+    /// }
+    /// </code>
+    /// </remarks>
+    public static void Deconstruct<T>(this Option<T> option, out T? value) where T : struct
+    {
+        value = null;
+
+        if (option.TryUnwrap(out var maybeValue))
+        {
+            value = maybeValue;
+        }
+    }
+
+    /// <summary>
     /// Converts an <see cref="Option{T}"/> to a <see cref="Result{T, TError}"/>.
     /// If the <see cref="Option{T}"/> is <c>Some</c>, returns an <c>Ok</c> result with the contained value.
     /// If the <see cref="Option{T}"/> is <c>None</c>, returns an <c>Error</c> result with the error provided by the error provider function.
@@ -417,22 +470,6 @@ public static class Option
     public static T? UnwrapNullable<T>(this Option<T> option) where T : class =>
         option.Match(
             T? (value) => value,
-            () => null
-        );
-
-    /// <summary>
-    /// Converts an <see cref="Option{T}"/> to a nullable value type.
-    /// If the <see cref="Option{T}"/> is <c>Some</c>, returns the contained value.
-    /// If the <see cref="Option{T}"/> is <c>None</c>, returns <see langword="null"/>.
-    /// Useful for interoperating with APIs that expect nullable value types.
-    /// </summary>
-    /// <typeparam name="T">The value type contained in the <see cref="Option{T}"/>.</typeparam>
-    /// <param name="option">The <see cref="Option{T}"/> to convert.</param>
-    /// <returns>The contained value if <c>Some</c>, otherwise <see langword="null"/>.</returns>
-    [GenerateAsyncExtension]
-    public static T? UnwrapNullableValue<T>(this Option<T> option) where T : struct =>
-        option.Match<T?>(
-            value => value,
             () => null
         );
 
@@ -685,4 +722,30 @@ public static class Option
 
         return default;
     }
+}
+
+/// <summary>
+/// <para>A static class which houses extension methods for <see cref="Option{T}"/> where the contained value is a <see langword="struct"/>.</para>
+/// <para>This exists separately from <see cref="Option"/> so the same method name (i.e. <c>UnwrapNullable</c>) 
+/// can have implementations for both value types and reference types without conflicts.</para>
+/// </summary>
+[EditorBrowsable(EditorBrowsableState.Never)]
+[GenerateAsyncExtension(ExtensionClassName = "ValueOptionAsyncExtensions", Namespace = "FunctionJunction.Async")]
+public static class ValueOption
+{
+    /// <summary>
+    /// Converts an <see cref="Option{T}"/> to a nullable value type.
+    /// If the <see cref="Option{T}"/> is <c>Some</c>, returns the contained value.
+    /// If the <see cref="Option{T}"/> is <c>None</c>, returns <see langword="null"/>.
+    /// Useful for interoperating with APIs that expect nullable value types.
+    /// </summary>
+    /// <typeparam name="T">The value type contained in the <see cref="Option{T}"/>.</typeparam>
+    /// <param name="option">The <see cref="Option{T}"/> to convert.</param>
+    /// <returns>The contained value if <c>Some</c>, otherwise <see langword="null"/>.</returns>
+    [GenerateAsyncExtension]
+    public static T? UnwrapNullable<T>(this Option<T> option) where T : struct =>
+        option.Match<T?>(
+            value => value,
+            () => null
+        );
 }
