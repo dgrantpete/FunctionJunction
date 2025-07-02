@@ -1,10 +1,14 @@
 <Project>
-  <PropertyGroup>
-	  <UseArtifactsOutput>true</UseArtifactsOutput>
-	  <Deterministic>true</Deterministic>
+	<PropertyGroup>
+		<UseArtifactsOutput>true</UseArtifactsOutput>
+		<Deterministic>true</Deterministic>
 
-	  <LangVersion>13.0</LangVersion>
-	  <ImplicitUsings>enable</ImplicitUsings>
-	  <Nullable>enable</Nullable>
-  </PropertyGroup>
+		<LangVersion>13.0</LangVersion>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<InternalsVisibleTo Include="FunctionJunction.Tests"/>
+	</ItemGroup>
 </Project>
