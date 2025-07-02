@@ -35,7 +35,7 @@ public static class OptionExtensions
     public static async ValueTask<Option<T>> ToOption<T>(this bool condition, Func<ValueTask<T>> valueProviderAsync) where T : notnull =>
         condition switch
         {
-            true => await valueProviderAsync(),
+            true => await valueProviderAsync().ConfigureAwait(false),
             false => default(Option<T>)
         };
 
