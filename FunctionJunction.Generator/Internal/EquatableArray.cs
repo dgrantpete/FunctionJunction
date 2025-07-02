@@ -7,13 +7,33 @@ internal readonly record struct EquatableArray<T>(ImmutableArray<T> Array) : IRe
 {
     public T this[int index] => Array[index];
 
-    public int Count => Array.Length;
+    public int Count => Array.IsDefault switch
+    {
+        true => 0,
+        false => Array.Length
+    };
 
     public bool Equals(EquatableArray<T> other) =>
         Array.AsSpan().SequenceEqual(other.Array.AsSpan());
 
-    public IEnumerator<T> GetEnumerator() => Array.AsEnumerable()
-        .GetEnumerator();
+    public EquatableArray<T> AddRange(EquatableArray<T> array) =>
+        new(Array.AddRange(array.Array));
+
+    public IEnumerator<T> GetEnumerator()
+    {
+        if (Array.IsDefault)
+        {
+            return EmptyEnumerator();
+        }
+
+        return Array.AsEnumerable()
+            .GetEnumerator();
+
+        static IEnumerator<T> EmptyEnumerator()
+        {
+            yield break;
+        }
+    }
 
     public override int GetHashCode()
     {
