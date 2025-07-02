@@ -70,3 +70,11 @@ public static partial class ResultAsyncExtensions
         }
     }
 }
+
+/// <summary>
+/// Asyncronous extension methods specific to <see cref="Result{TOk, TError}"/> which contain value types.
+/// </summary>
+public static partial class ValueResultAsyncExtensions
+{
+
+}
