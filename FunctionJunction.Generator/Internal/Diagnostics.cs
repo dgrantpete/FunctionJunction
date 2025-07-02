@@ -1,4 +1,5 @@
 ﻿using Microsoft.CodeAnalysis;
+using System.Collections.Immutable;
 
 namespace FunctionJunction.Generator.Internal;
 
@@ -60,4 +61,51 @@ internal static class Diagnostics
         DiagnosticSeverity.Warning,
         isEnabledByDefault: true
     );
+
+    public static DiagnosticDescriptor MemberAccessibilityInvalid { get; } = new(
+        id: "FJ0007",
+        title: "Invalid member accessibility",
+        messageFormat: "Accessibility for member '{0}' must be marked 'public' or 'internal'",
+        category: "Usage",
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true
+    );
+
+    public static DiagnosticDescriptor ObjectKindInvalid { get; } = new(
+        id: "FJ0008",
+        title: "Invalid object kind",
+        messageFormat: "'{0}' must be a 'class' or a 'record' to be a discriminated union",
+        category: "Usage",
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true
+    );
+
+    public static DiagnosticDescriptor DeconstructMethodNotFound { get; } = new(
+        id: "FJ0009",
+        title: "Deconstruct method not found",
+        messageFormat: "Member '{0}' does not have a valid 'Deconstruct' method for properties matching",
+        category: "Usage",
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true
+    );
+
+    public static Diagnostic Create(
+        DiagnosticDescriptor descriptor,
+        ImmutableArray<Location> locations,
+        params object?[]? messageArgs
+    )
+    {
+        var (firstLocation, restOfLocations) = locations switch
+        {
+            [var first, .. var rest] => (first, rest),
+            _ => (default, [])
+        };
+
+        return Diagnostic.Create(
+            descriptor,
+            firstLocation,
+            restOfLocations,
+            messageArgs
+        );
+    }
 }
