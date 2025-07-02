@@ -27,7 +27,8 @@
 	</ItemGroup>
 
 	<PropertyGroup>
-		<TargetFramework>netstandard2.0</TargetFramework>
+		<TargetFramework>net10.0</TargetFramework>
+		<LangVersion>preview</LangVersion>
 		<DefineConstants>$(DefineConstants);MAIN_PROJECT</DefineConstants>
 	</PropertyGroup>
 
@@ -42,8 +43,6 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="System.Collections.Immutable" Version="9.0.6"/>
-		<PackageReference Include="System.Linq.AsyncEnumerable" Version="10.0.0-preview.5.25277.114"/>
 		<PackageReference Include="PolySharp" Version="1.15.0">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
