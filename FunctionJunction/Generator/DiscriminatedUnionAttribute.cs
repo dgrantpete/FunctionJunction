@@ -6,7 +6,7 @@ namespace FunctionJunction.Generator.Internal.Attributes;
 
 /// <summary>
 /// An attribute used on classes to opt-in to discriminated union code generation.
-/// The top-level class will be defined as the discriminated union type, while nested classes will defined as members of that union.
+/// The top-level class will be defined as the discriminated union type, while nested classes will be defined as members of that union.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class)]
 public class DiscriminatedUnionAttribute : Attribute
