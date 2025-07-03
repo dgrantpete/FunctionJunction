@@ -1,28 +1,16 @@
 ﻿using Microsoft.CodeAnalysis;
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 
 namespace FunctionJunction.Generator.Internal;
 
-internal readonly record struct GeneratorResult<T>
+internal readonly record struct GeneratorResult<T> : IEquatable<GeneratorResult<T>> where T : notnull
 {
     public bool IsSuccess { get; }
 
-    public T? Value { get; }
+    public T Value { get; }
 
-    private readonly ImmutableArray<Diagnostic> diagnostics;
-
-    public ImmutableArray<Diagnostic> Diagnostics
-    {
-        get => diagnostics.IsDefault switch
-        {
-            true => [],
-            false => diagnostics
-        };
-        init
-        {
-            diagnostics = value;
-        }
-    }
+    public EquatableArray<Diagnostic> Diagnostics { get; init; }
 
     public GeneratorResult(T value)
     {
@@ -37,7 +25,7 @@ internal readonly record struct GeneratorResult<T>
         Diagnostics = diagnostics
     };
 
-    public bool TryGetValue(out T? result)
+    public bool TryGetValue([NotNullWhen(true)] out T? result)
     {
         if (IsSuccess)
         {
@@ -50,10 +38,11 @@ internal readonly record struct GeneratorResult<T>
     }
 
     public GeneratorResult<TResult> FlatMap<TResult>(Func<T, GeneratorResult<TResult>> mapper)
+        where TResult : notnull
     {
         if (TryGetValue(out var value))
         {
-            var newResult = mapper(value!);
+            var newResult = mapper(value);
 
             return newResult with
             {
@@ -68,6 +57,7 @@ internal readonly record struct GeneratorResult<T>
     }
 
     public GeneratorResult<TResult> Map<TResult>(Func<T, TResult> mapper)
+        where TResult : notnull
     {
         if (TryGetValue(out var value))
         {
@@ -84,19 +74,72 @@ internal readonly record struct GeneratorResult<T>
     }
 
     public GeneratorResult<TResult> And<TOther, TResult>(
-        Func<GeneratorResult<TOther>> otherProvider, 
-        Func<T, TOther, TResult> otherSelector
-    ) =>
-        FlatMap(value => otherProvider().Map(otherValue => otherSelector(value, otherValue)));
+        GeneratorResult<TOther> otherResult, 
+        Func<T, TOther, TResult> selector
+    ) 
+        where TResult : notnull
+        where TOther : notnull
+    {
+        var diagnostics = Diagnostics.AddRange(otherResult.Diagnostics);
+
+        if (TryGetValue(out var value) && otherResult.TryGetValue(out var otherValue))
+        {
+            return new(selector(value, otherValue))
+            {
+                Diagnostics = diagnostics
+            };
+        }
+
+        return new()
+        {
+            Diagnostics = diagnostics
+        };
+    }
 }
 
 internal static class GeneratorResult
 {
-    public static GeneratorResult<T> Ok<T>(T value, ImmutableArray<Diagnostic> diagnostics = default) =>
+    public static GeneratorResult<T> Ok<T>(T value, ImmutableArray<Diagnostic> diagnostics = default)
+        where T : notnull    
+    =>
         new(value) { Diagnostics = diagnostics };
 
-    public static GeneratorResult<T> Error<T>(ImmutableArray<Diagnostic> diagnostics) =>
+    public static GeneratorResult<T> Error<T>(ImmutableArray<Diagnostic> diagnostics)
+        where T : notnull
+    =>
         new() { Diagnostics = diagnostics };
+
+    public static GeneratorResult<ImmutableArray<T>> All<T>(IEnumerable<GeneratorResult<T>> results)
+        where T : notnull
+    {
+        var maybeOkValues = ImmutableArray.CreateBuilder<T>();
+        var diagnostics = ImmutableArray.CreateBuilder<Diagnostic>();
+
+        foreach (var result in results)
+        {
+            diagnostics.AddRange(result.Diagnostics);
+
+            if (!result.TryGetValue(out var value))
+            {
+                maybeOkValues = null;
+                continue;
+            }
+
+            maybeOkValues?.Add(value);
+        }
+
+        return maybeOkValues switch
+        {
+            { } okValues => new GeneratorResult<ImmutableArray<T>>(okValues.DrainToImmutable())
+            {
+                Diagnostics = diagnostics.DrainToImmutable()
+            },
+            null => new GeneratorResult<ImmutableArray<T>>()
+            {
+                Diagnostics = diagnostics.DrainToImmutable()
+            }
+        };
+    }
 
     public static GeneratorResult<T> FromNullable<T>(T? maybeValue, Func<ImmutableArray<Diagnostic>> diagnosticsProvider) 
         where T : struct 
