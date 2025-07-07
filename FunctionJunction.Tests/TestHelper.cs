@@ -42,7 +42,7 @@ internal static class TestHelper
         var syntaxTree = CSharpSyntaxTree.ParseText(source);
 
         var frameworkReference = await ReferenceAssemblies.Net.Net80
-            .ResolveAsync("C#", default);
+            .ResolveAsync(LanguageNames.CSharp, default);
 
         var mainProjectReference = MetadataReference.CreateFromFile(typeof(DiscriminatedUnionAttribute).Assembly.Location);
 

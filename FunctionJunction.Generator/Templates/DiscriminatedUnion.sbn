@@ -9,7 +9,7 @@ namespace {{ namespace }}
     {{~ for attribute in polymorphic_attributes ~}}
     {{ attribute }}
     {{~ end ~}}
-    {{ string.downcase accessibility }} partial {{ string.downcase object_type }} {{ type }}
+    {{ string.downcase accessibility }} abstract partial {{ string.downcase object_type }} {{ type }}
     {
         {{~ if generate_private_constructor ~}}
         private {{ name }}() { }
@@ -24,7 +24,7 @@ namespace {{ namespace }}
         {{~ for match in match_model ~}}
         /// <param name="on{{ match.member_name }}">The function to invoke when the instance is of type <c>{{ match.member_name }}</c>.</param>
         {{~ end ~}}
-        /// <returns>The result of invoking the corresponding matching function.</returns>
+        /// <returns>The result of invoking the corresponding matched function.</returns>
         /// <exception cref="InvalidOperationException">Thrown when the instance is not a known variant of the discriminated union.</exception>
         public TResult Match<TResult>(
             {{~ for match in match_model ~}}

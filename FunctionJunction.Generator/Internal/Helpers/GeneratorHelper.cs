@@ -1,10 +1,10 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using FunctionJunction.Generator.Internal.Models;
+using Microsoft.CodeAnalysis;
 using System.Collections.Immutable;
-using static FunctionJunction.Generator.Internal.GeneratorResult;
 
-namespace FunctionJunction.Generator.Internal;
+namespace FunctionJunction.Generator.Internal.Helpers;
 
-internal static class Extensions
+internal static class GeneratorHelper
 {
     public static EquatableArray<T> ToEquatableArray<T>(this IEnumerable<T> enumerable) where T : IEquatable<T> =>
         new([.. enumerable]);
@@ -56,17 +56,4 @@ internal static class Extensions
             { } value => Enumerable.Repeat(value, 1),
             null => []
         });
-
-    public static Accessibility? GetAccessibility(this ISymbol symbol) => symbol.DeclaredAccessibility switch
-    {
-        Microsoft.CodeAnalysis.Accessibility.Public => Accessibility.Public,
-        Microsoft.CodeAnalysis.Accessibility.Internal => Accessibility.Internal,
-        _ => null
-    };
-
-    public static string ToCamelCase(this string pascalCase) => pascalCase switch
-    {
-        [var first, .. var rest] => char.ToLowerInvariant(first) + rest,
-        _ => pascalCase
-    };
 }

@@ -1,4 +1,4 @@
-﻿namespace FunctionJunction.Generator.Internal;
+﻿namespace FunctionJunction.Generator.Internal.Models;
 
 internal enum Accessibility
 {

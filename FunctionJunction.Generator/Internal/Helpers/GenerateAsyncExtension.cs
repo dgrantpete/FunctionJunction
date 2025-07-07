@@ -1,12 +1,12 @@
 ﻿using FunctionJunction.Generator.Internal.Attributes;
 
-namespace FunctionJunction.Generator.Internal;
+namespace FunctionJunction.Generator.Internal.Helpers;
 
-internal static class GenerateAsyncExtensionDefaults
+internal static class GenerateAsyncExtension
 {
     public const string TemplateName = "AsyncExtensionMethod.sbn";
 
     public const string AttributeName = $"FunctionJunction.Generator.{nameof(GenerateAsyncExtensionAttribute)}";
 
-    public static GenerateAsyncExtensionAttribute Instance { get; } = new();
+    public static GenerateAsyncExtensionAttribute DefaultInstance { get; } = new();
 }

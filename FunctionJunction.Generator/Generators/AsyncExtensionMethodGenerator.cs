@@ -1,12 +1,13 @@
-﻿using FunctionJunction.Generator.Internal;
-using FunctionJunction.Generator.Internal.Attributes;
+﻿using FunctionJunction.Generator.Internal.Attributes;
+using FunctionJunction.Generator.Internal.Helpers;
+using FunctionJunction.Generator.Internal.Models;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Scriban;
 using Scriban.Runtime;
 using System.Collections.Immutable;
-using Accessibility = FunctionJunction.Generator.Internal.Accessibility;
+using Accessibility = FunctionJunction.Generator.Internal.Models.Accessibility;
 
 namespace FunctionJunction.Generator.Generators;
 
@@ -20,7 +21,7 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
         var assembly = typeof(AsyncExtensionMethodGenerator).Assembly;
 
         var resourceName = assembly.GetManifestResourceNames()
-            .Single(resource => resource.EndsWith(GenerateAsyncExtensionDefaults.TemplateName));
+            .Single(resource => resource.EndsWith(GenerateAsyncExtension.TemplateName));
 
         using var templateStream = assembly.GetManifestResourceStream(resourceName);
 
@@ -35,7 +36,7 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
     {
         var methodInfoProvider = context.SyntaxProvider
             .ForAttributeWithMetadataName(
-                GenerateAsyncExtensionDefaults.AttributeName,
+                GenerateAsyncExtension.AttributeName,
                 static (syntaxNode, _) => syntaxNode is MethodDeclarationSyntax,
                 GetMethodInfo
             )
@@ -158,7 +159,7 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
     private static ConstantSymbols? GetConstantSymbols(Compilation compilation)
     {
         if (
-            compilation.GetTypeByMetadataName(GenerateAsyncExtensionDefaults.AttributeName) is not { } attributeSymbol
+            compilation.GetTypeByMetadataName(GenerateAsyncExtension.AttributeName) is not { } attributeSymbol
                 || compilation.GetTypeByMetadataName("System.Threading.Tasks.Task`1") is not { } taskSymbol
                 || compilation.GetTypeByMetadataName("System.Threading.Tasks.ValueTask`1") is not { } valueTaskSymbol
         )
@@ -509,9 +510,9 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
 
         public readonly AttributeSettings ToSettings() =>
             new(
-                ExtensionClassName ?? GenerateAsyncExtensionDefaults.Instance.ExtensionClassName,
-                ExtensionMethodName ?? GenerateAsyncExtensionDefaults.Instance.ExtensionMethodName,
-                Namespace ?? GenerateAsyncExtensionDefaults.Instance.Namespace
+                ExtensionClassName ?? GenerateAsyncExtension.DefaultInstance.ExtensionClassName,
+                ExtensionMethodName ?? GenerateAsyncExtension.DefaultInstance.ExtensionMethodName,
+                Namespace ?? GenerateAsyncExtension.DefaultInstance.Namespace
             );
 
         public readonly AttributeInfo Or(AttributeInfo? other) =>

@@ -2,7 +2,7 @@
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 
-namespace FunctionJunction.Generator.Internal;
+namespace FunctionJunction.Generator.Internal.Models;
 
 internal readonly record struct GeneratorResult<T> : IEquatable<GeneratorResult<T>> where T : notnull
 {
