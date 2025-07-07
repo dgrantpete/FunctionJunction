@@ -31,11 +31,8 @@ jobs:
         echo "::notice ::Package version extracted: $VERSION"
         echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
 
-    - name: Build & Pack
-      run: |
-        dotnet pack --configuration Release \
-                    -p:PackageVersion=${{ steps.extract_version.outputs.VERSION }} \
-                    --output ./artifacts
+    - name: Build
+      run: dotnet build --configuration Release -p:PackageVersion=${{ steps.extract_version.outputs.VERSION }}
 
     - name: Test
       run: dotnet test --configuration Release --no-build --verbosity normal
