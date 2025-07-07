@@ -157,7 +157,7 @@ Configure discriminated union generation:
 
 ```csharp
 [DiscriminatedUnion(
-    MatchOn = MatchUnionOn.Properties,  // or Type, None
+    MatchOn = MatchUnionOn.Deconstruct,  // or Type, None
     GeneratePolymorphicSerialization = true,
     GeneratePrivateConstructor = true
 )]
