@@ -10,16 +10,17 @@ namespace FunctionJunction.Generator.Internal.Attributes;
 public enum MatchUnionOn
 {
     /// <summary>
-    /// Do not generate a <c>Match</c> function for this discriminated union.
+    /// Don't generate a <c>Match</c> function for this discriminated union.
     /// </summary>
     None,
     /// <summary>
-    /// Generates a <c>Match</c> function where the nested type itself is passed directly into each <c>Func</c>.
+    /// Generate a <c>Match</c> function where the derived type itself is passed directly into a <see cref="Func{TDerivedType, TResult}"/>.
     /// </summary>
     Type,
     /// <summary>
-    /// <para>Generates a <c>Match</c> function where the public properties of the nested type are "deconstructed" and passed into the <c>Func</c>.</para>
-    /// <para>Useful for simple discriminated union members whose type is a simple wrapper around its contents.</para>
+    /// <para>Generate a <c>Match</c> function that calls the <c>Deconstruct</c> method for each derived type, then passes these deconstructed values together into their respective <c>Func</c> (in the same order as the <see langword="out"/> parameters).</para>
+    /// <para>If no <c>Deconstruct</c> method is defined, a parameterless <see cref="Func{TResult}"/> will be used.</para>
+    /// <para>Useful for simple derived types whose type is a simple wrapper around its contents.</para>
     /// </summary>
-    Properties
+    Deconstruct
 }
