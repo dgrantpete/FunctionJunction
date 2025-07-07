@@ -1,8 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
+		<!-- Actual version will be populated by CICD pipeline -->
+		<Version Condition="'$(PackageVersion)' == ''">0.0.0-dev</Version>
+
 		<Authors>Grant Peterson</Authors>
-		<Version>0.2.0-alpha</Version>
 		<NeutralLanguage>en-US</NeutralLanguage>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<RepositoryUrl>https://github.com/dgrantpete/FunctionJunction</RepositoryUrl>
