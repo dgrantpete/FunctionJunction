@@ -33,7 +33,7 @@
 
 	<PropertyGroup>
 		<FunctionJunction_Defaults_GeneratePrivateConstructor>true</FunctionJunction_Defaults_GeneratePrivateConstructor>
-		<FunctionJunction_Defaults_MatchOn>Properties</FunctionJunction_Defaults_MatchOn>
+		<FunctionJunction_Defaults_MatchOn>Deconstruct</FunctionJunction_Defaults_MatchOn>
 		<FunctionJunction_Defaults_GeneratePolymorphicSerialization>false</FunctionJunction_Defaults_GeneratePolymorphicSerialization>
 	</PropertyGroup>
 
