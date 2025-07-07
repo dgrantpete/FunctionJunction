@@ -15,7 +15,7 @@ namespace FunctionJunction;
 /// <typeparam name="TError">The type of the error value.</typeparam>
 [DiscriminatedUnion]
 [GenerateAsyncExtension(ExtensionClassName = "ResultAsyncExtensions", Namespace = "FunctionJunction.Async")]
-public abstract partial record Result<TOk, TError>
+public partial record Result<TOk, TError>
 {
     /// <summary>
     /// Gets a value indicating whether this <see cref="Result{TOk, TError}"/> represents a successful operation.
@@ -30,7 +30,7 @@ public abstract partial record Result<TOk, TError>
     /// <summary>
     /// Represents a successful result containing a value of type <typeparamref name="TOk"/>.
     /// </summary>
-    public record Ok : Result<TOk, TError>
+    public sealed record Ok : Result<TOk, TError>
     {
         /// <summary>
         /// Gets the successful value contained in this <c>Ok</c> result.
@@ -55,7 +55,7 @@ public abstract partial record Result<TOk, TError>
     /// <summary>
     /// Represents a failed result containing an error value of type <typeparamref name="TError"/>.
     /// </summary>
-    public record Error : Result<TOk, TError>
+    public sealed record Error : Result<TOk, TError>
     {
         /// <summary>
         /// Gets the error value contained in this <c>Error</c> result.
@@ -129,7 +129,7 @@ public abstract partial record Result<TOk, TError>
     [GenerateAsyncExtension]
     public Result<TResult, TError> Map<TResult>(Func<TOk, TResult> mapper) =>
         FlatMap(ok =>
-            NewOk(mapper(ok))
+            new Result<TResult, TError>.Ok(mapper(ok))
         );
 
     /// <summary>
@@ -141,7 +141,11 @@ public abstract partial record Result<TOk, TError>
     /// <returns>A <see cref="ValueTask"/> containing a <see cref="Result{TOk, TError}"/> with the transformed success value if this <see cref="Result{TOk, TError}"/> is <c>Ok</c>, otherwise a <see cref="ValueTask"/> containing the original error.</returns>
     [GenerateAsyncExtension]
     public ValueTask<Result<TResult, TError>> Map<TResult>(Func<TOk, ValueTask<TResult>> mapperAsync) =>
-        FlatMap(async ok => NewOk(await mapperAsync(ok).ConfigureAwait(false)));
+        FlatMap(async ValueTask<Result<TResult, TError>> (ok) => 
+            new Result<TResult, TError>.Ok(await mapperAsync(ok)
+                .ConfigureAwait(false)
+            )
+        );
 
     /// <summary>
     /// Attempts to recover from an error by applying a function that may produce a new <see cref="Result{TOk, TError}"/>.
@@ -184,7 +188,7 @@ public abstract partial record Result<TOk, TError>
     [GenerateAsyncExtension]
     public Result<TOk, TResult> MapError<TResult>(Func<TError, TResult> mapper) =>
         Recover(error =>
-            NewError(mapper(error))
+            new Result<TOk, TResult>.Error(mapper(error))
         );
 
     /// <summary>
@@ -197,8 +201,10 @@ public abstract partial record Result<TOk, TError>
     /// <returns>A <see cref="ValueTask"/> containing a <see cref="Result{TOk, TError}"/> with the original success value if <c>Ok</c>, otherwise a <see cref="ValueTask"/> containing a <see cref="Result{TOk, TError}"/> with the transformed error value.</returns>
     [GenerateAsyncExtension]
     public ValueTask<Result<TOk, TResult>> MapError<TResult>(Func<TError, ValueTask<TResult>> mapperAsync) =>
-        Recover(async error =>
-            NewError(await mapperAsync(error).ConfigureAwait(false))
+        Recover(async ValueTask<Result<TOk, TResult>> (error) =>
+            new Result<TOk, TResult>.Error(await mapperAsync(error)
+                .ConfigureAwait(false)
+            )
         );
 
     /// <summary>
@@ -214,7 +220,7 @@ public abstract partial record Result<TOk, TError>
         FlatMap(ok => validator(ok) switch
         {
             true => this,
-            false => NewError(errorMapper(ok))
+            false => new Result<TOk, TError>.Error(errorMapper(ok))
         });
 
     /// <summary>
@@ -230,7 +236,7 @@ public abstract partial record Result<TOk, TError>
         FlatMap(async ok => await validatorAsync(ok).ConfigureAwait(false) switch
         {
             true => this,
-            false => NewError(await errorMapperAsync(ok).ConfigureAwait(false))
+            false => new Result<TOk, TError>.Error(await errorMapperAsync(ok).ConfigureAwait(false))
         });
 
     /// <summary>
@@ -442,12 +448,6 @@ public abstract partial record Result<TOk, TError>
             yield return error;
         }
     }
-
-    private static Result<TResult, TError> NewOk<TResult>(TResult value) =>
-        new Result<TResult, TError>.Ok(value);
-
-    private static Result<TOk, TResult> NewError<TResult>(TResult value) =>
-        new Result<TOk, TResult>.Error(value);
 }
 
 /// <summary>
