@@ -698,8 +698,18 @@ public static class Option
     /// <typeparam name="T">The type of values in the options. Must be non-null.</typeparam>
     /// <param name="options">The async sequence of options to search.</param>
     /// <returns>A <see cref="ValueTask{T}"/> containing the first <c>Some</c> value found, or <c>None</c> if none exist.</returns>
-    public static async ValueTask<Option<T>> Any<T>(IAsyncEnumerable<Option<T>> options) where T : notnull =>
-        await options.FirstOrDefaultAsync(option => option.IsSome).ConfigureAwait(false);
+    public static async ValueTask<Option<T>> Any<T>(IAsyncEnumerable<Option<T>> options) where T : notnull
+    {
+        await foreach (var option in options.ConfigureAwait(false))
+        {
+            if (option.IsSome)
+            {
+                return option;
+            }
+        }
+
+        return default;
+    }
 
     /// <summary>
     /// Asynchronously finds the first <c>Some</c> value from a collection of async option providers.
@@ -714,9 +724,9 @@ public static class Option
         {
             var option = await optionProviderAsync().ConfigureAwait(false);
 
-            if (option.TryUnwrap(out var value))
+            if (option.IsSome)
             {
-                return value;
+                return option;
             }
         }
 
