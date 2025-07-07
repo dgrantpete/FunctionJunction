@@ -6,6 +6,7 @@
 		<LangVersion>13.0</LangVersion>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
+		<NoWarn>$(NoWarn);IDE0079</NoWarn>
 	</PropertyGroup>
 
 	<ItemGroup>
