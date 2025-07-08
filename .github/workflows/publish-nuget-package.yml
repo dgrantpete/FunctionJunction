@@ -59,6 +59,8 @@ jobs:
     - name: Validate SourceLink
       run: |
         dotnet tool install --global sourcelink
+
+        shopt -s globstar
     
         for snupkg in artifacts/**/*.snupkg; do
           if [[ -f "$snupkg" ]]; then
