@@ -31,7 +31,6 @@
 	<PropertyGroup>
 		<TargetFramework>netstandard2.0</TargetFramework>
 		<DefineConstants>$(DefineConstants);MAIN_PROJECT</DefineConstants>
-		<BclVersion>9.0.6</BclVersion>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -41,16 +40,10 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="$(BclVersion)" />
-		<PackageReference Include="System.Collections.Immutable" Version="$(BclVersion)" />
-		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0">
-			<PrivateAssets>all</PrivateAssets>
-			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference>
-		<PackageReference Include="PolySharp" Version="1.15.0">
-			<PrivateAssets>all</PrivateAssets>
-			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference>
+		<PackageReference Include="Microsoft.Bcl.AsyncInterfaces" />
+		<PackageReference Include="System.Collections.Immutable" />
+		<PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="all" />
+		<PackageReference Include="PolySharp" PrivateAssets="all" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -67,7 +60,7 @@
 		<CompilerVisibleProperty Include="FunctionJunction_Defaults_MatchOn" />
 		<CompilerVisibleProperty Include="FunctionJunction_Defaults_GeneratePrivateConstructor" />
 	</ItemGroup>
-	
+
 	<Target Name="PackAnalyzers" DependsOnTargets="ResolveProjectReferences;ResolvePackageDependenciesDesignTime" BeforeTargets="_GetPackageFiles">
 		<ItemGroup>
 			<None Include="@(Analyzer)" Condition="$([System.String]::Copy('%(Filename)').StartsWith('FunctionJunction'))">
