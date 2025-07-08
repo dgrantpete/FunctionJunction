@@ -14,7 +14,6 @@
 		<PackageVersion Include="PolySharp" Version="1.15.0" />
 
 		<!-- Generator project dependencies -->
-		<PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="4.14.0" />
 		<PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="$(RoslynVersion)" />
 		<PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="$(RoslynVersion)" />
 		<PackageVersion Include="Microsoft.CSharp" Version="4.7.0" />
