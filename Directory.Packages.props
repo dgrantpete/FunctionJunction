@@ -2,14 +2,13 @@
 
 	<PropertyGroup>
 		<ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-		<BclVersion>9.0.6</BclVersion>
-		<RoslynVersion>4.11.0</RoslynVersion>
+		<RoslynVersion>4.10.0</RoslynVersion>
 	</PropertyGroup>
 
 	<ItemGroup>
 		
-		<PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="$(BclVersion)" />
-		<PackageVersion Include="System.Collections.Immutable" Version="$(BclVersion)" />
+		<PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="8.0.0" />
+		<PackageVersion Include="System.Collections.Immutable" Version="9.0.0" />
 		<PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
 		<PackageVersion Include="PolySharp" Version="1.15.0" />
 
