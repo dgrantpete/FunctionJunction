@@ -3,10 +3,22 @@ name: Publish NuGet Package
 on:
   release:
     types: [published]
+    workflow_dispatch:
+      inputs:
+        tag:
+          description: 'Tag to republish (e.g. v0.0.1-alpha or v1.0.0)'
+          required: true
 
 jobs:
   publish:
     runs-on: ubuntu-latest
+
+    if: |
+      (github.event_name == 'release' && github.event.release.tag_name) ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.tag != '')
+
+    env:
+      VERSION_TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || github.event.inputs.tag }}
 
     steps:
     - uses: actions/checkout@v4
@@ -20,7 +32,7 @@ jobs:
     - name: Extract and Validate Version
       id: extract_version
       run: |
-        VERSION="${{ github.event.release.tag_name }}"
+        VERSION="${VERSION_TAG}"
         VERSION=${VERSION#v}
 
         if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc|preview)(\.[0-9]+)?)?$ ]]; then
