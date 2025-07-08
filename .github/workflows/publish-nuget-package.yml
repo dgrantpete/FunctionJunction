@@ -56,6 +56,26 @@ jobs:
     - name: Test
       run: dotnet test --configuration Release --no-build --verbosity normal
 
+    - name: Validate SourceLink
+      run: |
+        dotnet tool install --global sourcelink
+    
+        for snupkg in artifacts/**/*.snupkg; do
+          if [[ -f "$snupkg" ]]; then
+            echo "Testing SourceLink in: $snupkg"
+            TEMP_DIR=$(mktemp -d)
+            unzip -q "$snupkg" -d "$TEMP_DIR"
+        
+            for pdb in "$TEMP_DIR"/**/*.pdb; do
+              if [[ -f "$pdb" ]]; then
+                sourcelink test "$pdb"
+              fi
+            done
+        
+            rm -rf "$TEMP_DIR"
+          fi
+        done
+
     - name: Publish
       run: >-
         dotnet nuget push "artifacts/**/*.nupkg"
