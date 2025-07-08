@@ -3,11 +3,11 @@ name: Publish NuGet Package
 on:
   release:
     types: [published]
-    workflow_dispatch:
-      inputs:
-        tag:
-          description: 'Tag to republish (e.g. v0.0.1-alpha or v1.0.0)'
-          required: true
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to republish (e.g. v0.0.1-alpha or v1.0.0)'
+        required: true
 
 jobs:
   publish:
@@ -32,19 +32,26 @@ jobs:
     - name: Extract and Validate Version
       id: extract_version
       run: |
-        VERSION="${VERSION_TAG}"
-        VERSION=${VERSION#v}
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          echo "Validating that tag '$VERSION_TAG' exists..."
+          if ! git ls-remote --tags origin | grep -q "refs/tags/${VERSION_TAG}$"; then
+            echo "::error::Tag '$VERSION_TAG' does not exist in the repository"
+            exit 1
+          fi
+        fi
+
+        VERSION="${VERSION_TAG#v}"
 
         if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc|preview)(\.[0-9]+)?)?$ ]]; then
-          echo "::error ::Invalid version format: $VERSION"
+          echo "::error::Invalid version format: $VERSION"
           exit 1
         fi
 
-        echo "::notice ::Package version extracted: $VERSION"
-        echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
+        echo "::notice::Package version extracted: $VERSION"
+        echo "VERSION=$VERSION" >> "$GITHUB_ENV"
 
     - name: Build
-      run: dotnet build --configuration Release -p:PackageVersion=${{ steps.extract_version.outputs.VERSION }}
+      run: dotnet build --configuration Release -p:PackageVersion=$VERSION
 
     - name: Test
       run: dotnet test --configuration Release --no-build --verbosity normal
@@ -53,5 +60,5 @@ jobs:
       run: >-
         dotnet nuget push "artifacts/**/*.nupkg"
         --api-key "${{ secrets.NUGET_API_KEY }}"
-        --source "https://api.nuget.org/v3/index.json""
+        --source "https://api.nuget.org/v3/index.json"
         --skip-duplicate
