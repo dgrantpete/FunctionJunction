@@ -1,12 +1,15 @@
 <Solution>
-  <Folder Name="/Solution Items/">
+  <Folder Name="/Assets/">
+    <File Path="FunctionJunction.png" />
+    <File Path="LICENSE.txt" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/Configuration/">
     <File Path=".editorconfig" />
     <File Path=".github/workflows/publish-nuget-package.yml" />
     <File Path="Directory.Build.props" />
-    <File Path="FunctionJunction.png" />
+    <File Path="Directory.Packages.props" />
     <File Path="FunctionJunction.props" />
-    <File Path="LICENSE.txt" />
-    <File Path="README.md" />
   </Folder>
   <Project Path="FunctionJunction.Generator/FunctionJunction.Generator.csproj" />
   <Project Path="FunctionJunction.Tests/FunctionJunction.Tests.csproj" />
