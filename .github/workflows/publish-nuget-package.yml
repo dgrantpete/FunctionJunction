@@ -3,11 +3,11 @@ name: Publish NuGet Package
 on:
   release:
     types: [published]
-    workflow_dispatch:
-      inputs:
-        tag:
-          description: 'Tag to republish (e.g. v0.0.1-alpha or v1.0.0)'
-          required: true
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to republish (e.g. v0.0.1-alpha or v1.0.0)'
+        required: true
 
 jobs:
   publish:
