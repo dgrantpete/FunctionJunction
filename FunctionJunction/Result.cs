@@ -404,24 +404,6 @@ public partial record Result<TOk, TError>
         UnwrapOr(async error => throw await exceptionProviderAsync(error).ConfigureAwait(false));
 
     /// <summary>
-    /// Safely casts the success value to the specified type if the <see cref="Result{TOk, TError}"/> is <c>Ok</c>.
-    /// The generic constraints ensure that the cast is type-safe. If the <see cref="Result{TOk, TError}"/> is <c>Error</c>, returns the error unchanged.
-    /// </summary>
-    /// <typeparam name="TResult">The type to cast the success value to. Must be non-null and the current success type must be assignable to it.</typeparam>
-    /// <returns>A <c>Result&lt;TResult, TError&gt;</c> containing the cast success value if this <see cref="Result{TOk, TError}"/> is <c>Ok</c>, otherwise the original error.</returns>
-    public Result<TResult, TError> Cast<TResult>() where TResult : notnull, TOk =>
-        Map(ok => (TResult)ok!);
-
-    /// <summary>
-    /// Safely casts the error value to the specified type if the <see cref="Result{TOk, TError}"/> is <c>Error</c>.
-    /// The generic constraints ensure that the cast is type-safe. If the <see cref="Result{TOk, TError}"/> is <c>Ok</c>, returns the success value unchanged.
-    /// </summary>
-    /// <typeparam name="TResult">The type to cast the error value to. Must be non-null and the current error type must be assignable to it.</typeparam>
-    /// <returns>A <c>Result&lt;TOk, TResult&gt;</c> containing the original success value if this <see cref="Result{TOk, TError}"/> is <c>Ok</c>, otherwise the cast error value.</returns>
-    public Result<TOk, TResult> CastError<TResult>() where TResult : notnull, TError =>
-        MapError(error => (TResult)error!);
-
-    /// <summary>
     /// Converts the <see cref="Result{TOk, TError}"/> to an <see cref="IEnumerable{T}"/> of success values.
     /// If the <see cref="Result{TOk, TError}"/> is <c>Ok</c>, returns an enumerable containing the single success value.
     /// If the <see cref="Result{TOk, TError}"/> is <c>Error</c>, returns an empty enumerable.

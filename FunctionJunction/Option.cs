@@ -322,15 +322,6 @@ public readonly record struct Option<T> where T : notnull
         });
 
     /// <summary>
-    /// Safely casts the contained value to the specified type if the <see cref="Option{T}"/> contains a value.
-    /// The generic constraints ensure that the cast is type-safe. If the <see cref="Option{T}"/> is <c>None</c>, returns <c>None</c>.
-    /// </summary>
-    /// <typeparam name="TResult">The type to cast to. Must be non-null and the current type must be assignable to it.</typeparam>
-    /// <returns>An <c>Option&lt;TResult&gt;</c> containing the cast value if this <see cref="Option{T}"/> is <c>Some</c>, otherwise <c>None</c>.</returns>
-    public Option<TResult> Cast<TResult>() where TResult : notnull, T =>
-        Map(value => (TResult)value);
-
-    /// <summary>
     /// Converts the <see cref="Option{T}"/> to an <see cref="IEnumerable{T}"/>.
     /// If the <see cref="Option{T}"/> is <c>Some</c>, returns an enumerable containing the single value.
     /// If the <see cref="Option{T}"/> is <c>None</c>, returns an empty enumerable.
