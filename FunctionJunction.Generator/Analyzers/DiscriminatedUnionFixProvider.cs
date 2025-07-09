@@ -117,6 +117,19 @@ internal class DiscriminatedUnionFixProvider : CodeFixProvider
             );
         }
 
+        if (diagnostic.Id == DerivedTypeAccessibilityInvalid.Id)
+        {
+            RegisterFix(
+                $"Make derived type 'public'",
+                cancellationToken => UpdateAccessibility(
+                    Microsoft.CodeAnalysis.Accessibility.Public,
+                    diagnosticNode,
+                    document,
+                    cancellationToken
+                )
+            );
+        }
+
         if (diagnostic.Id == ConstructorAlreadyDefined.Id)
         {
             RegisterFix(
@@ -179,7 +192,7 @@ internal class DiscriminatedUnionFixProvider : CodeFixProvider
         {
             return document;
         }
-
+        
         var editor = await DocumentEditor.CreateAsync(document, cancellationToken);
 
         var newModifiers = editor.Generator.GetModifiers(unionDeclaration) | modifiers;
