@@ -56,12 +56,12 @@ jobs:
     - name: Test
       run: dotnet test --configuration Release --no-build --verbosity normal
 
-    - name: Validate SourceLink
+    - name: Validate Package
       run: |
         dotnet tool install --global sourcelink
 
         shopt -s globstar
-    
+        
         for snupkg in artifacts/**/*.snupkg; do
           if [[ -f "$snupkg" ]]; then
             echo "Testing SourceLink in: $snupkg"
@@ -77,6 +77,37 @@ jobs:
             rm -rf "$TEMP_DIR"
           fi
         done
+        
+        echo "Checking for analyzers in NuGet package..."
+        ANALYZER_FOUND=false
+        
+        for nupkg in artifacts/**/*.nupkg; do
+          if [[ -f "$nupkg" ]]; then
+            echo "Checking package: $nupkg"
+            TEMP_DIR=$(mktemp -d)
+            unzip -q "$nupkg" -d "$TEMP_DIR"
+            
+            if [[ -d "$TEMP_DIR/analyzers/dotnet/cs" ]]; then
+              DLL_COUNT=$(find "$TEMP_DIR/analyzers/dotnet/cs" -name "*.dll" | wc -l)
+              if [[ $DLL_COUNT -gt 0 ]]; then
+                echo "Found $DLL_COUNT analyzer DLL(s) in $nupkg"
+                ls -la "$TEMP_DIR/analyzers/dotnet/cs/"*.dll
+                ANALYZER_FOUND=true
+              else
+                echo "Analyzer directory exists but contains no DLLs"
+              fi
+            else
+              echo "No analyzer directory found at analyzers/dotnet/cs"
+            fi
+            
+            rm -rf "$TEMP_DIR"
+          fi
+        done
+        
+        if [[ "$ANALYZER_FOUND" != "true" ]]; then
+          echo "::error::No analyzers found in NuGet package; expected FunctionJunction.Generator.dll in analyzers/dotnet/cs/"
+          exit 1
+        fi
 
     - name: Publish
       run: >-
