@@ -2,6 +2,6 @@
 
 internal enum Accessibility
 {
-    Public,
-    Internal
+    Internal,
+    Public
 }

@@ -268,6 +268,8 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
         return new(
             unionInfo.Name,
             unionInfo.Accessibility,
+            memberContexts.Select(memberContext => memberContext.Accessibility)
+                .Min(),
             unionSymbol.ToDisplayString(DisplayFormat.Unqualified),
             unionInfo.Namespace,
             unionInfo.ObjectType,
@@ -500,6 +502,7 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
     private readonly record struct UnionRenderModel(
         string Name,
         Accessibility Accessibility,
+        Accessibility MinimumMemberAccessibility,
         string Type,
         string Namespace,
         ObjectType ObjectType,

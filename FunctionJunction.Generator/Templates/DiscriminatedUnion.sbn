@@ -28,7 +28,7 @@ namespace {{ namespace }}
         {{~ end ~}}
         /// <returns>The result of invoking the corresponding matched function.</returns>
         /// <exception cref="InvalidOperationException">Thrown when the instance is not a known variant of the discriminated union.</exception>
-        public TResult Match<TResult>(
+        {{ string.downcase minimum_member_accessibility }} TResult Match<TResult>(
             {{~ for match in match_model ~}}
             {{ match.parameter }}{{ if !for.last }},{{ end }}
             {{~ end ~}}
