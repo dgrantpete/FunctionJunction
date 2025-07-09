@@ -73,7 +73,7 @@ public static partial class ResultAsyncExtensions
 }
 
 /// <summary>
-/// Asyncronous extension methods specific to <see cref="Result{TOk, TError}"/> which contain value types.
+/// Asynchronous extension methods specific to <see cref="Result{TOk, TError}"/> which contain value types.
 /// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
 public static partial class ValueResultAsyncExtensions

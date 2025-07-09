@@ -41,7 +41,7 @@ public static partial class OptionAsyncExtensions
 }
 
 /// <summary>
-/// Asyncronous extension methods specific to <see cref="Option{T}"/> which contain a value type.
+/// Asynchronous extension methods specific to <see cref="Option{T}"/> which contain a value type.
 /// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
 public static partial class ValueOptionAsyncExtensions
