@@ -1,8 +1,6 @@
 # FunctionJunction
 
-<p align="center">
-  <img src="FunctionJunction.png" alt="Function Junction Icon" width="128"/>
-</p>
+![Logo](https://raw.githubusercontent.com/dgrantpete/FunctionJunction/refs/heads/main/FunctionJunction.png)
 
 A functional programming library for C# that provides Option and Result types, discriminated unions, and functional combinators with comprehensive async support.
 
@@ -54,7 +52,7 @@ var result = ParseInt(userInput)
 
 // Error recovery
 var recovered = result
-    .Recover(error => TryAlternativeMethod(error))
+    .Recover(TryAlternativeMethod)
     .UnwrapOr(error => DefaultValue);
 ```
 
@@ -86,16 +84,16 @@ All operations have async counterparts that work with Task-returning functions w
 ```csharp
 // Async operations
 var userData = await userIdOption
-    .FlatMap(async id => await FetchUser(id))
+    .FlatMap(FetchUserAsync)
     .AwaitFilter(user => user.IsActive)
-    .AwaitMap(async user => await EnrichUserData(user))
-    .AwaitUnwrapOr(async () => await GetDefaultUser());
+    .AwaitMap(EnrichUserData)
+    .AwaitUnwrapOr(GetDefaultUser);
 
 // Combining multiple async operations
 var result = await Result.All(
-    ValidateEmail(email),
-    CheckUserExists(email),
-    VerifyNotBlacklisted(email)
+    () => ValidateEmail(email),
+    () => CheckUserExists(email),
+    () => VerifyNotBlacklisted(email)
 );
 
 // Async enumerable extensions
@@ -103,7 +101,7 @@ await productsIds
     .ToAsyncEnumerable()
     .SelectWhere(async id => await TryLoadProduct(id))
     .Scan(0m, (total, product) => total + product.Price)
-    .LastAsync();
+    .Last();
 ```
 
 ## API Reference
