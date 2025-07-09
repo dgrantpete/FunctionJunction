@@ -117,6 +117,44 @@ internal class DiscriminatedUnionFixProvider : CodeFixProvider
             );
         }
 
+        if (diagnostic.Id == ConstructorAlreadyDefined.Id)
+        {
+            RegisterFix(
+                $"Set '{nameof(DiscriminatedUnionAttribute.GeneratePrivateConstructor)}' to 'false'",
+                cancellationToken => UpdateAttributeArguments(
+                    new UnionAttributeInfo
+                    {
+                        GeneratePrivateConstructor = false
+                    },
+                    diagnosticNode,
+                    document,
+                    cancellationToken
+                )
+            );
+
+            RegisterFix(
+                $"Remove parameterless constructor",
+                cancellationToken => RemoveConstructor(
+                    diagnosticNode,
+                    document,
+                    cancellationToken
+                )
+            );
+        }
+
+        if (diagnostic.Id == ConstructorNotPrivate.Id)
+        {
+            RegisterFix(
+                "Make constructor 'private'",
+                cancellationToken => UpdateAccessibility(
+                    Microsoft.CodeAnalysis.Accessibility.Private,
+                    diagnosticNode,
+                    document,
+                    cancellationToken
+                )
+            );
+        }
+
         void RegisterFix(string title, Func<CancellationToken, Task<Document>> createChangedDocument) => 
             fixContext.RegisterCodeFix(
                 CodeAction.Create(
@@ -235,6 +273,55 @@ internal class DiscriminatedUnionFixProvider : CodeFixProvider
         );
 
         editor.ReplaceNode(attributeSyntax, updatedAttributeSyntax);
+
+        return editor.GetChangedDocument();
+    }
+
+    private static async Task<Document> UpdateAccessibility(
+        Microsoft.CodeAnalysis.Accessibility accessibility,
+        SyntaxNode diagnosticNode,
+        Document document,
+        CancellationToken cancellationToken = default
+    )
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var declaration = diagnosticNode.FirstAncestorOrSelf<MemberDeclarationSyntax>();
+
+        if (declaration is null)
+        {
+            return document;
+        }
+
+        var editor = await DocumentEditor.CreateAsync(document, cancellationToken);
+
+        editor.SetAccessibility(declaration, accessibility);
+
+        return editor.GetChangedDocument();
+    }
+
+    private static async Task<Document> RemoveConstructor(
+        SyntaxNode diagnosticNode,
+        Document document,
+        CancellationToken cancellationToken = default
+    )
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var constructorDeclaration = diagnosticNode
+            .FirstAncestorOrSelf<ConstructorDeclarationSyntax>();
+
+        var unionDeclaration = constructorDeclaration
+            ?.FirstAncestorOrSelf<TypeDeclarationSyntax>();
+
+        if (constructorDeclaration is null || unionDeclaration is null )
+        {
+            return document;
+        }
+
+        var editor = await DocumentEditor.CreateAsync(document, cancellationToken);
+
+        editor.RemoveNode(constructorDeclaration, SyntaxRemoveOptions.KeepNoTrivia);
 
         return editor.GetChangedDocument();
     }

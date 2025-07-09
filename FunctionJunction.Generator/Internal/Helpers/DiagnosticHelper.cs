@@ -26,7 +26,7 @@ internal static class DiagnosticHelper
 
     public static DiagnosticDescriptor DerivedTypeAttributeNotFound { get; } = new(
         id: "FJ0003",
-        title: "'JsonDerivedTypeAttribute' not found",
+        title: $"{nameof(TypeName.JsonDerivedTypeAttribute)} not found",
         messageFormat: $"'{TypeName.JsonDerivedTypeAttribute}' was not found but '{nameof(DiscriminatedUnionAttribute.GeneratePolymorphicSerialization)}' was set to 'true' for '{{0}}'; " +
         $"install a version of 'System.Text.Json' that supports polymorphic serialization or set '{nameof(DiscriminatedUnionAttribute.GeneratePolymorphicSerialization)}' to 'false'",
         category: "Usage",
@@ -46,7 +46,7 @@ internal static class DiagnosticHelper
 
     public static DiagnosticDescriptor GenericsIncompatibleWithSerialization { get; } = new(
         id: "FJ0005",
-        title: $"Can't generate '{nameof(TypeName.JsonDerivedTypeAttribute)}' for generic type",
+        title: $"Can't generate {nameof(TypeName.JsonDerivedTypeAttribute)} for generic type",
         messageFormat: $"'{TypeName.JsonDerivedTypeAttribute}' cannot be generated for the generic discriminated union '{{0}}'; " +
         $"set '{nameof(DiscriminatedUnionAttribute.GeneratePolymorphicSerialization)}' to 'false'",
         category: "Usage",
@@ -75,9 +75,27 @@ internal static class DiagnosticHelper
     public static DiagnosticDescriptor DerivedTypeCanBeSealed { get; } = new(
         id: "FJ0008",
         title: "Derived type can be sealed",
-        messageFormat: "Consider adding 'sealed' to derived type '{0}' to prevent additional derived types being added via inheritance",
+        messageFormat: "Consider adding 'sealed' to derived type '{0}' to prevent unhandled derived types being added via inheritance",
         category: "Usage",
         DiagnosticSeverity.Info,
+        isEnabledByDefault: true
+    );
+
+    public static DiagnosticDescriptor ConstructorAlreadyDefined { get; } = new(
+        id: "FJ0009",
+        title: "Parameterless constructor already defined",
+        messageFormat: $"'{nameof(DiscriminatedUnionAttribute.GeneratePolymorphicSerialization)}' is set to 'true' for discriminated union '{{0}}', but a parameterless constructor is already defined",
+        category: "Usage",
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true
+    );
+
+    public static DiagnosticDescriptor ConstructorNotPrivate { get; } = new(
+        id: "FJ0010",
+        title: "Discriminated union constructor isn't private",
+        messageFormat: "Constructor for '{0}' should be private to prevent unhandled derived types being added via inheritance",
+        category: "Usage",
+        DiagnosticSeverity.Warning,
         isEnabledByDefault: true
     );
 
@@ -91,6 +109,8 @@ internal static class DiagnosticHelper
         yield return DerivedTypeAccessibilityInvalid;
         yield return ObjectKindInvalid;
         yield return DerivedTypeCanBeSealed;
+        yield return ConstructorAlreadyDefined;
+        yield return ConstructorNotPrivate;
     }
 
     public static Diagnostic Create(

@@ -83,6 +83,40 @@ internal class DiscriminatedUnionAnalyzer : DiagnosticAnalyzer
             union.Analysis.ReportDiagnostic(accessibilityDiagnostic);
         }
 
+        var constructors = union.Symbol.Constructors.Where(constructor =>
+            constructor is { IsImplicitlyDeclared: false }
+        );
+
+        foreach (var constructor in constructors)
+        {
+            if (constructor.Parameters is [] && union.UserSettings.GeneratePrivateConstructor is true)
+            {
+                var constructorDefinedDiagnostic = DiagnosticHelper.Create(
+                    DiagnosticHelper.ConstructorAlreadyDefined,
+                    constructor.Locations,
+                    union.Symbol.Name
+                );
+
+                union.Analysis.ReportDiagnostic(constructorDefinedDiagnostic);
+            }
+
+            if (constructor.DeclaredAccessibility is not Microsoft.CodeAnalysis.Accessibility.Private)
+            {
+                var privateConstructorDiagnostic = DiagnosticHelper.Create(
+                    DiagnosticHelper.ConstructorNotPrivate,
+                    constructor.Locations,
+                    union.Symbol.Name
+                );
+
+                union.Analysis.ReportDiagnostic(privateConstructorDiagnostic);
+            }
+        }
+
+        var parameterlessConstructor = union.Symbol.Constructors
+            .FirstOrDefault(constructor => 
+                constructor is { Parameters: [], IsImplicitlyDeclared: false }
+            );
+
         var nonPartialSyntax = union.Symbol.DeclaringSyntaxReferences
             .Select(syntaxReference => syntaxReference.GetSyntax())
             .OfType<TypeDeclarationSyntax>()

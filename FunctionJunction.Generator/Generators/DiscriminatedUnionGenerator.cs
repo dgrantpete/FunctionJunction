@@ -147,12 +147,16 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
             };
         }
 
+        var hasParameterlessConstructor = unionSymbol.Constructors
+            .Any(constructor => constructor is { Parameters: [], IsImplicitlyDeclared: false });
+
         return new(
             unionSymbol.Name,
             accessibility,
             SymbolId.Create(unionSymbol),
             unionSymbol.ContainingNamespace.ToDisplayString(),
             objectType,
+            hasParameterlessConstructor,
             memberInfos,
             attributeInfo
         );
@@ -235,7 +239,7 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
     )
     {
         cancellationToken.ThrowIfCancellationRequested();
-
+        
         var unionSymbol = unionInfo.Type.Resolve(context.Compilation);
 
         var memberContexts = unionInfo.MemberInfos
@@ -259,13 +263,15 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
             return memberContext;
         }
 
+        var generatePrivateConstructor = context.Settings.GeneratePrivateConstructor;
+
         return new(
             unionInfo.Name,
             unionInfo.Accessibility,
             unionSymbol.ToDisplayString(DisplayFormat.Unqualified),
             unionInfo.Namespace,
             unionInfo.ObjectType,
-            context.Settings.GeneratePrivateConstructor
+            context.Settings.GeneratePrivateConstructor && !unionInfo.HasParameterlessConstructor
         )
         {
             MatchModel = CreateMatchModel(memberContexts, context, cancellationToken),
@@ -450,6 +456,7 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
         SymbolId<INamedTypeSymbol> Type,
         string Namespace,
         ObjectType ObjectType,
+        bool HasParameterlessConstructor,
         EquatableArray<MemberInfo> MemberInfos,
         UnionAttributeInfo DiscriminatedUnionAttributeInfo
     );
