@@ -18,6 +18,8 @@ runs:
     - id: build
       shell: bash
       run: |
+        dotnet tool restore
+
         ARTIFACT_DIR="./artifacts"
         mkdir -p "$ARTIFACT_DIR"
         
