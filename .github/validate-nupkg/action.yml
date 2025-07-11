@@ -23,7 +23,7 @@ runs:
         
             for pdb in "$TEMP_DIR"/**/*.pdb; do
               if [[ -f "$pdb" ]]; then
-                sourcelink test "$pdb"
+                dotnet sourcelink test "$pdb"
               fi
             done
         
