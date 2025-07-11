@@ -18,34 +18,39 @@ jobs:
       (github.event_name == 'workflow_dispatch' && github.event.inputs.tag != '')
 
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout Main Branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: '9.x'
+      - name: Install .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.x'
 
-    - id: extract-version
-      uses: ./.github/extract-version
-      with:
-        tag-name: ${{ github.event_name == 'release' && github.event.release.tag_name || github.event.inputs.tag }}
+      - name: Extract and Validate Version
+        id: extract-version
+        uses: ./.github/extract-version
+        with:
+          tag-name: ${{ github.event_name == 'release' && github.event.release.tag_name || github.event.inputs.tag }}
 
-    - id: build
-      uses: ./.github/build
-      with:
-        package-version: ${{ steps.extract-version.outputs.version }}
+      - name: Build Solution
+        id: build
+        uses: ./.github/build
+        with:
+          package-version: ${{ steps.extract-version.outputs.version }}
 
-    - name: Test
-      run: dotnet test --configuration Release --no-build --verbosity normal
+      - name: Test
+        run: dotnet test --configuration Release --no-build --verbosity normal
 
-    - uses: ./.github/validate-nupkg
-      with:
-        artifact-path: ${{ steps.build.outputs.artifact-path }}
+      - name: Validate Nuget Package Contents
+        uses: ./.github/validate-nupkg
+        with:
+          artifact-path: ${{ steps.build.outputs.artifact-path }}
 
-    - name: Publish
-      run: >-
-        dotnet nuget push "${{ steps.build.outputs.artifact }}/**/*.nupkg"
-        --api-key "${{ secrets.NUGET_API_KEY }}"
-        --source "https://api.nuget.org/v3/index.json"
-        --skip-duplicate
+      - name: Publish
+        run: >-
+          dotnet nuget push "${{ steps.build.outputs.artifact }}/**/*.nupkg"
+          --api-key "${{ secrets.NUGET_API_KEY }}"
+          --source "https://api.nuget.org/v3/index.json"
+          --skip-duplicate
