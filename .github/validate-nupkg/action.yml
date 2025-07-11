@@ -35,31 +35,103 @@ runs:
         
         echo "Checking for analyzers in NuGet package..."
         ANALYZER_FOUND=false
-        
+
         for nupkg in ${{ inputs.artifact-path }}/**/*.nupkg; do
           if [[ -f "$nupkg" ]]; then
+            echo "=========================================="
             echo "Checking package: $nupkg"
+            echo "Package size: $(ls -lh "$nupkg" | awk '{print $5}')"
+            echo "=========================================="
+    
             TEMP_DIR=$(mktemp -d)
             unzip -q "$nupkg" -d "$TEMP_DIR"
-            
+    
+            echo ""
+            echo "=== Complete directory structure ==="
+            tree "$TEMP_DIR" 2>/dev/null || find "$TEMP_DIR" -type d | sort
+    
+            echo ""
+            echo "=== All DLLs in the package ==="
+            find "$TEMP_DIR" -name "*.dll" -type f | while read -r dll; do
+              # Get relative path from temp dir
+              REL_PATH="${dll#$TEMP_DIR/}"
+              FILE_SIZE=$(ls -lh "$dll" | awk '{print $5}')
+              echo "  - $REL_PATH (size: $FILE_SIZE)"
+            done
+    
+            echo ""
+            echo "=== Checking specific analyzer location ==="
             if [[ -d "$TEMP_DIR/analyzers/dotnet/cs" ]]; then
+              echo " Analyzer directory exists at: analyzers/dotnet/cs"
+              echo "Contents of analyzer directory:"
+              ls -la "$TEMP_DIR/analyzers/dotnet/cs/" | sed 's/^/    /'
+      
               DLL_COUNT=$(find "$TEMP_DIR/analyzers/dotnet/cs" -name "*.dll" | wc -l)
               if [[ $DLL_COUNT -gt 0 ]]; then
-                echo "Found $DLL_COUNT analyzer DLL(s) in $nupkg"
-                ls -la "$TEMP_DIR/analyzers/dotnet/cs/"*.dll
+                echo " Found $DLL_COUNT analyzer DLL(s)"
+                find "$TEMP_DIR/analyzers/dotnet/cs" -name "*.dll" | while read -r dll; do
+                  echo "    - $(basename "$dll") ($(ls -lh "$dll" | awk '{print $5}'))"
+                done
                 ANALYZER_FOUND=true
               else
-                echo "Analyzer directory exists but contains no DLLs"
+                echo " Analyzer directory exists but contains no DLLs"
               fi
             else
-              echo "No analyzer directory found at analyzers/dotnet/cs"
+              echo " No analyzer directory found at analyzers/dotnet/cs"
+              echo "  Available directories under analyzers/:"
+              if [[ -d "$TEMP_DIR/analyzers" ]]; then
+                find "$TEMP_DIR/analyzers" -type d | sed 's/^/    /'
+              else
+                echo "    (no analyzers directory found at all)"
+              fi
             fi
-            
+    
+            echo ""
+            echo "=== Looking for FunctionJunction.Generator.dll anywhere in package ==="
+            GENERATOR_LOCATIONS=$(find "$TEMP_DIR" -name "FunctionJunction.Generator.dll" -type f)
+            if [[ -n "$GENERATOR_LOCATIONS" ]]; then
+              echo "Found FunctionJunction.Generator.dll at:"
+              echo "$GENERATOR_LOCATIONS" | while read -r loc; do
+                REL_PATH="${loc#$TEMP_DIR/}"
+                echo "  - $REL_PATH"
+              done
+            else
+              echo " FunctionJunction.Generator.dll not found anywhere in the package!"
+            fi
+    
+            echo ""
+            echo "=== Package metadata ==="
+            if [[ -f "$TEMP_DIR/[Content_Types].xml" ]]; then
+              echo "Package format: NuGet Package"
+            fi
+    
+            # Check the .nuspec file for content items
+            NUSPEC_FILE=$(find "$TEMP_DIR" -name "*.nuspec" -type f | head -1)
+            if [[ -f "$NUSPEC_FILE" ]]; then
+              echo "NuSpec file found: $(basename "$NUSPEC_FILE")"
+              echo "Content items in .nuspec:"
+              grep -A5 -B5 "analyzers" "$NUSPEC_FILE" 2>/dev/null | sed 's/^/  /' || echo "  (no analyzer references found in .nuspec)"
+            fi
+    
+            echo ""
+            echo "=== All files in package (first 20) ==="
+            find "$TEMP_DIR" -type f | head -20 | while read -r file; do
+              REL_PATH="${file#$TEMP_DIR/}"
+              echo "  - $REL_PATH"
+            done
+            TOTAL_FILES=$(find "$TEMP_DIR" -type f | wc -l)
+            if [[ $TOTAL_FILES -gt 20 ]]; then
+              echo "  ... and $((TOTAL_FILES - 20)) more files"
+            fi
+    
             rm -rf "$TEMP_DIR"
+            echo ""
           fi
         done
-        
+
         if [[ "$ANALYZER_FOUND" != "true" ]]; then
           echo "::error::No analyzers found in NuGet package; expected FunctionJunction.Generator.dll in analyzers/dotnet/cs/"
           exit 1
+        else
+          echo " Analyzer validation passed!"
         fi
