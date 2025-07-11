@@ -34,18 +34,18 @@ jobs:
     - id: build
       uses: ./.github/build
       with:
-        package-version: ${{ steps.extract-version.version }}
+        package-version: ${{ steps.extract-version.outputs.version }}
 
     - name: Test
       run: dotnet test --configuration Release --no-build --verbosity normal
 
     - uses: ./.github/validate-nupkg
       with:
-        artifact-path: ${{ steps.build.artifact-path }}
+        artifact-path: ${{ steps.build.outputs.artifact-path }}
 
     - name: Publish
       run: >-
-        dotnet nuget push "${{ steps.build.artifact }}/**/*.nupkg"
+        dotnet nuget push "${{ steps.build.outputs.artifact }}/**/*.nupkg"
         --api-key "${{ secrets.NUGET_API_KEY }}"
         --source "https://api.nuget.org/v3/index.json"
         --skip-duplicate
