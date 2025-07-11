@@ -1,0 +1,35 @@
+name: Extract Version
+description: Extracts and validates the package version from a tag name
+
+inputs:
+  tag-name:
+    description: The name of the release tag
+
+outputs:
+  version:
+    description: The extracted version string
+    value: ${{ steps.extract-version.outputs.version }}
+
+runs:
+  using: composite
+
+  steps:
+    - id: extract-version
+      shell: bash
+      run: |
+        TAG='${{ inputs.tag-name }}'
+
+        if ! git ls-remote --tags origin | grep -q "refs/tags/${TAG}$"; then
+          echo "::error::Tag '$TAG' does not exist in the repository"
+          exit 1
+        fi
+
+        VERSION=${TAG#v}
+
+        if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc|preview)(\.[0-9]+)?)?$ ]]; then
+          echo "::error::Invalid version format: $VERSION"
+          exit 1
+        fi
+
+        echo "::notice::Package version extracted: $VERSION"
+        echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"

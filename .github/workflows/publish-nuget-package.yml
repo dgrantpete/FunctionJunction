@@ -17,9 +17,6 @@ jobs:
       (github.event_name == 'release' && github.event.release.tag_name) ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.tag != '')
 
-    env:
-      VERSION_TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || github.event.inputs.tag }}
-
     steps:
     - uses: actions/checkout@v4
       with:
@@ -29,89 +26,26 @@ jobs:
       with:
         dotnet-version: '9.x'
 
-    - name: Extract and Validate Version
-      id: extract_version
-      run: |
-        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-          echo "Validating that tag '$VERSION_TAG' exists..."
-          if ! git ls-remote --tags origin | grep -q "refs/tags/${VERSION_TAG}$"; then
-            echo "::error::Tag '$VERSION_TAG' does not exist in the repository"
-            exit 1
-          fi
-        fi
+    - id: extract-version
+      uses: ./.github/extract-version
+      with:
+        tag-name: ${{ github.event_name == 'release' && github.event.release.tag_name || github.event.inputs.tag }}
 
-        VERSION="${VERSION_TAG#v}"
-
-        if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc|preview)(\.[0-9]+)?)?$ ]]; then
-          echo "::error::Invalid version format: $VERSION"
-          exit 1
-        fi
-
-        echo "::notice::Package version extracted: $VERSION"
-        echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-
-    - name: Build
-      run: dotnet build --configuration Release -p:PackageVersion=$VERSION
+    - id: build
+      uses: ./.github/build
+      with:
+        package-version: ${{ steps.extract-version.version }}
 
     - name: Test
       run: dotnet test --configuration Release --no-build --verbosity normal
 
-    - name: Validate Package
-      run: |
-        dotnet tool install --global sourcelink
-
-        shopt -s globstar
-        
-        for snupkg in artifacts/**/*.snupkg; do
-          if [[ -f "$snupkg" ]]; then
-            echo "Testing SourceLink in: $snupkg"
-            TEMP_DIR=$(mktemp -d)
-            unzip -q "$snupkg" -d "$TEMP_DIR"
-        
-            for pdb in "$TEMP_DIR"/**/*.pdb; do
-              if [[ -f "$pdb" ]]; then
-                sourcelink test "$pdb"
-              fi
-            done
-        
-            rm -rf "$TEMP_DIR"
-          fi
-        done
-        
-        echo "Checking for analyzers in NuGet package..."
-        ANALYZER_FOUND=false
-        
-        for nupkg in artifacts/**/*.nupkg; do
-          if [[ -f "$nupkg" ]]; then
-            echo "Checking package: $nupkg"
-            TEMP_DIR=$(mktemp -d)
-            unzip -q "$nupkg" -d "$TEMP_DIR"
-            
-            if [[ -d "$TEMP_DIR/analyzers/dotnet/cs" ]]; then
-              DLL_COUNT=$(find "$TEMP_DIR/analyzers/dotnet/cs" -name "*.dll" | wc -l)
-              if [[ $DLL_COUNT -gt 0 ]]; then
-                echo "Found $DLL_COUNT analyzer DLL(s) in $nupkg"
-                ls -la "$TEMP_DIR/analyzers/dotnet/cs/"*.dll
-                ANALYZER_FOUND=true
-              else
-                echo "Analyzer directory exists but contains no DLLs"
-              fi
-            else
-              echo "No analyzer directory found at analyzers/dotnet/cs"
-            fi
-            
-            rm -rf "$TEMP_DIR"
-          fi
-        done
-        
-        if [[ "$ANALYZER_FOUND" != "true" ]]; then
-          echo "::error::No analyzers found in NuGet package; expected FunctionJunction.Generator.dll in analyzers/dotnet/cs/"
-          exit 1
-        fi
+    - uses: ./.github/validate-nupkg
+      with:
+        artifact-path: ${{ steps.build.artifact-path }}
 
     - name: Publish
       run: >-
-        dotnet nuget push "artifacts/**/*.nupkg"
+        dotnet nuget push "${{ steps.build.artifact }}/**/*.nupkg"
         --api-key "${{ secrets.NUGET_API_KEY }}"
         --source "https://api.nuget.org/v3/index.json"
         --skip-duplicate

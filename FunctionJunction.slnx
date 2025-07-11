@@ -6,10 +6,21 @@
   </Folder>
   <Folder Name="/Configuration/">
     <File Path=".editorconfig" />
-    <File Path=".github/workflows/publish-nuget-package.yml" />
     <File Path="Directory.Build.props" />
     <File Path="Directory.Packages.props" />
     <File Path="FunctionJunction.props" />
+  </Folder>
+  <Folder Name="/Github/">
+    <File Path=".github/workflows/publish-nuget-package.yml" />
+  </Folder>
+  <Folder Name="/Github/build/">
+    <File Path=".github/build/action.yml" />
+  </Folder>
+  <Folder Name="/Github/extract-version/">
+    <File Path=".github/extract-version/action.yml" />
+  </Folder>
+  <Folder Name="/Github/validate-nupkg/">
+    <File Path=".github/validate-nupkg/action.yml" />
   </Folder>
   <Project Path="FunctionJunction.Generator/FunctionJunction.Generator.csproj" />
   <Project Path="FunctionJunction.Tests/FunctionJunction.Tests.csproj" />

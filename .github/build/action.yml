@@ -1,0 +1,28 @@
+name: Build
+description: Builds the project
+
+inputs:
+  package-version:
+    description: The Nuget package version
+    required: true
+
+outputs:
+  artifact-path:
+    description: The location of the artifacts directory
+    value: ${{ steps.build.outputs.artifact }}
+
+runs:
+  using: composite
+
+  steps:
+    - id: build
+      shell: bash
+      run: |
+        ARTIFACT_DIR="./artifacts-${{ inputs.package-version }}"
+        mkdir -p "$ARTIFACT_DIR"
+        
+        dotnet build --configuration Release \
+          -p:PackageVersion="${{ inputs.package-version }}" \
+          --artifacts-path "$ARTIFACT_DIR"
+        
+        echo "artifact=${ARTIFACT_DIR}" >> "$GITHUB_OUTPUT"
