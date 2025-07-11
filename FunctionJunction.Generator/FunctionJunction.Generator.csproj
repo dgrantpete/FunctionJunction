@@ -17,7 +17,7 @@
 		<PackageReference Include="Scriban" IncludeAssets="build" PrivateAssets="all" />
 		<PackageReference Include="PolySharp" PrivateAssets="all" />
 	</ItemGroup>
-	
+
 	<ItemGroup>
 		<EmbeddedResource Include="Templates/*.sbn" />
 		<Compile Include="../FunctionJunction/Generator/*.cs" Link="Internal/Attributes/%(Filename)%(Extension)" />
