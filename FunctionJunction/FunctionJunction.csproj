@@ -60,7 +60,7 @@
 
 	<Target Name="PackAnalyzers" BeforeTargets="_GetPackageFiles">
 		<ItemGroup>
-				<Content Include="$(ArtifactsPath)\bin\FunctionJunction.Generator\$(Configuration)\*.dll"
+				<Content Include="$(ArtifactsPath)\bin\FunctionJunction.Generator\$(Configuration.ToLower())\*.dll"
 						 Pack="true"
 						 PackagePath="analyzers/dotnet/cs" />
 		</ItemGroup>
