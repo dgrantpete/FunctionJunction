@@ -112,6 +112,21 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
             return null;
         }
 
+        var jsonMemberSymbols = unionSymbol.GetAttributes()
+            .Where(attribute =>
+                SymbolEqualityComparer.Default.Equals(
+                    attribute.AttributeClass,
+                    constantSymbols.JsonDerivedTypeAttribute
+                )
+            )
+            .Select(attribute => attribute.ConstructorArguments switch
+            {
+                [{ Value: ITypeSymbol jsonMemberSymbol }, ..] => jsonMemberSymbol,
+                _ => null
+            })
+            .OfType<ITypeSymbol>()
+            .ToArray();
+
         var attributeInfo = UnionAttributeInfo.FromAttributeData(attribute, cancellationToken);
 
         var memberInfos = unionSymbol.GetTypeMembers()
@@ -138,9 +153,7 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
                 memberSymbol.Name,
                 accessibility,
                 SymbolId.Create(memberSymbol),
-                memberSymbol.GetAttributes()
-                    .Select(attribute => attribute.AttributeClass)
-                    .Contains(constantSymbols.JsonDerivedTypeAttribute, SymbolEqualityComparer.Default)
+                jsonMemberSymbols.Contains(memberSymbol, SymbolEqualityComparer.Default)
             )
             {
                 DeconstructInfo = GetDeconstructInfo(memberSymbol)
