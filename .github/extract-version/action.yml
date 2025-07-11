@@ -32,4 +32,4 @@ runs:
         fi
 
         echo "::notice::Package version extracted: $VERSION"
-        echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
+        echo "version=$VERSION" >> "$GITHUB_OUTPUT"
