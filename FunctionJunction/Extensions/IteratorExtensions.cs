@@ -21,7 +21,7 @@ public static class IteratorExtensions
     /// </code>
     /// </remarks>
     public static IEnumerable<Enumerated<T>> Enumerate<T>(this IEnumerable<T> source) =>
-        source.Select((value, index) => new Enumerated<T>(value, index));
+        source.Select((value, index) => new Enumerated<T>(index, value));
 
     /// <summary>
     /// Applies an accumulator function over a sequence, returning each intermediate result.

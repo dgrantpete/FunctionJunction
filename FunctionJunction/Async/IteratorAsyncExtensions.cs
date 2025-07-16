@@ -19,7 +19,7 @@ public static class IteratorAsyncExtensions
 
         await foreach (var item in source.ConfigureAwait(false))
         {
-            yield return new(item, index);
+            yield return new(index, item);
 
             index++;
         }
