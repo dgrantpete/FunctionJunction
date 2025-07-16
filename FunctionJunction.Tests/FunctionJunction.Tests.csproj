@@ -4,6 +4,7 @@
 		<TargetFramework>net9.0</TargetFramework>
 		<IsPackable>false</IsPackable>
 		<TestSourceLocations>TestSources\*.cs</TestSourceLocations>
+		<NoWarn>$(NoWarn);CS0219;CS7022;IDE0059;IDE0062;CS8321</NoWarn>
 	</PropertyGroup>
 
 	<ItemGroup>
