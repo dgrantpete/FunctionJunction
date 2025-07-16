@@ -24,6 +24,12 @@ internal static class SymbolHelper
         _ => null
     };
 
+    public static IEnumerable<INamedTypeSymbol> GetDerivedTypeSymbols(this ITypeSymbol unionSymbol) =>
+        unionSymbol.GetTypeMembers()
+            .Where(memberSymbol =>
+                SymbolEqualityComparer.Default.Equals(memberSymbol.BaseType, unionSymbol)
+            );
+
     public static string ToCamelCase(this string pascalCase) => pascalCase switch
     {
         [var first, .. var rest] => char.ToLowerInvariant(first) + rest,

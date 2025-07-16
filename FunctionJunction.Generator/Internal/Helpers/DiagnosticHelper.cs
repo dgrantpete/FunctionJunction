@@ -83,8 +83,8 @@ internal static class DiagnosticHelper
 
     public static DiagnosticDescriptor ConstructorAlreadyDefined { get; } = new(
         id: "FJ0009",
-        title: "Parameterless constructor already defined",
-        messageFormat: $"'{nameof(DiscriminatedUnionAttribute.GeneratePolymorphicSerialization)}' is set to 'true' for discriminated union '{{0}}', but a parameterless constructor is already defined",
+        title: "Constructor already defined",
+        messageFormat: $"'{nameof(DiscriminatedUnionAttribute.GeneratePrivateConstructor)}' is set to 'true' for discriminated union '{{0}}', but an explicit constructor is already defined",
         category: "Usage",
         DiagnosticSeverity.Warning,
         isEnabledByDefault: true
@@ -99,7 +99,16 @@ internal static class DiagnosticHelper
         isEnabledByDefault: true
     );
 
-    public static IEnumerable<DiagnosticDescriptor> IterateDiagnostics()
+    public static DiagnosticDescriptor UnionNested { get; } = new(
+        id: "FJ0011",
+        title: "Discriminated union is defined inside another type",
+        messageFormat: "Discriminated union '{0}' cannot be defined inside another type; define it directly in a namespace instead",
+        category: "Usage",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true
+    );
+
+    public static IEnumerable<DiagnosticDescriptor> IterateFixableDiagnostics()
     {
         yield return MissingDerivedTypes;
         yield return NotMarkedPartial;
@@ -111,6 +120,21 @@ internal static class DiagnosticHelper
         yield return DerivedTypeCanBeSealed;
         yield return ConstructorAlreadyDefined;
         yield return ConstructorNotPrivate;
+    }
+
+    public static IEnumerable<DiagnosticDescriptor> IterateAllDiagnostics()
+    {
+        yield return MissingDerivedTypes;
+        yield return NotMarkedPartial;
+        yield return DerivedTypeAttributeNotFound;
+        yield return SwitchExpressionsNotSupported;
+        yield return GenericsIncompatibleWithSerialization;
+        yield return DerivedTypeAccessibilityInvalid;
+        yield return ObjectKindInvalid;
+        yield return DerivedTypeCanBeSealed;
+        yield return ConstructorAlreadyDefined;
+        yield return ConstructorNotPrivate;
+        yield return UnionNested;
     }
 
     public static Diagnostic Create(

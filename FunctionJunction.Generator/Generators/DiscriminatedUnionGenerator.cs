@@ -107,6 +107,7 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
                 || unionSymbol.GetObjectType() is not { } objectType
                 || context.Attributes is not [var attribute]
                 || unionSymbol.GetAccessibility() is not { } accessibility
+                || unionSymbol.ContainingType is not null
         )
         {
             return null;
@@ -129,8 +130,7 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
 
         var attributeInfo = UnionAttributeInfo.FromAttributeData(attribute, cancellationToken);
 
-        var memberInfos = unionSymbol.GetTypeMembers()
-            .Where(memberSymbol => SymbolEqualityComparer.Default.Equals(memberSymbol.ContainingType, unionSymbol))
+        var memberInfos = unionSymbol.GetDerivedTypeSymbols()
             .Select(GetMemberInfo)
             .OfType<MemberInfo>()
             .ToImmutableArray();
@@ -160,8 +160,8 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
             };
         }
 
-        var hasParameterlessConstructor = unionSymbol.Constructors
-            .Any(constructor => constructor is { Parameters: [], IsImplicitlyDeclared: false });
+        var hasUserDefinedConstructor = unionSymbol.Constructors
+            .Any(constructor => !constructor.IsImplicitlyDeclared);
 
         return new(
             unionSymbol.Name,
@@ -169,7 +169,7 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
             SymbolId.Create(unionSymbol),
             unionSymbol.ContainingNamespace.ToDisplayString(),
             objectType,
-            hasParameterlessConstructor,
+            hasUserDefinedConstructor,
             memberInfos,
             attributeInfo
         );
@@ -282,6 +282,7 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
             unionInfo.Name,
             unionInfo.Accessibility,
             memberContexts.Select(memberContext => memberContext.Accessibility)
+                .DefaultIfEmpty(Accessibility.Public)
                 .Min(),
             unionSymbol.ToDisplayString(DisplayFormat.Unqualified),
             unionInfo.Namespace,

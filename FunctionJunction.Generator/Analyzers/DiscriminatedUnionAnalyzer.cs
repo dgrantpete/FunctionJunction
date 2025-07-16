@@ -13,7 +13,7 @@ namespace FunctionJunction.Generator.Analyzers;
 internal class DiscriminatedUnionAnalyzer : DiagnosticAnalyzer
 {
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [..
-        DiagnosticHelper.IterateDiagnostics()
+        DiagnosticHelper.IterateAllDiagnostics()
     ];
 
     public override void Initialize(AnalysisContext context)
@@ -37,7 +37,6 @@ internal class DiscriminatedUnionAnalyzer : DiagnosticAnalyzer
                     }
 
                     AnalyzeUnionDefinition(unionContext);
-                    AnalyzeJsonPolymorphic(unionContext);
                     AnalyzeUnionMembers(unionContext);
                 },
                 SymbolKind.NamedType
@@ -49,7 +48,10 @@ internal class DiscriminatedUnionAnalyzer : DiagnosticAnalyzer
     {
         var maybeAttributeData = unionSymbol.GetAttributes()
             .FirstOrDefault(attribute =>
-                SymbolEquals(attribute.AttributeClass, compilation.Constants.DiscriminatedUnionAttribute)
+                SymbolEqualityComparer.Default.Equals(
+                    attribute.AttributeClass, 
+                    compilation.Constants.DiscriminatedUnionAttribute
+                )
             );
 
         return maybeAttributeData switch
@@ -72,6 +74,17 @@ internal class DiscriminatedUnionAnalyzer : DiagnosticAnalyzer
             union.Analysis.ReportDiagnostic(notValidObjectDiagnostic);
         }
 
+        if (union.Symbol.ContainingType is not null)
+        {
+            var nestedUnionDiagnostic = DiagnosticHelper.Create(
+                DiagnosticHelper.UnionNested,
+                union.Symbol.Locations,
+                union.Symbol.Name
+            );
+
+            union.Analysis.ReportDiagnostic(nestedUnionDiagnostic);
+        }
+
         if (union.Symbol.GetAccessibility() is null)
         {
             var accessibilityDiagnostic = DiagnosticHelper.Create(
@@ -84,12 +97,12 @@ internal class DiscriminatedUnionAnalyzer : DiagnosticAnalyzer
         }
 
         var constructors = union.Symbol.Constructors.Where(constructor =>
-            constructor is { IsImplicitlyDeclared: false }
+            !constructor.IsImplicitlyDeclared
         );
 
         foreach (var constructor in constructors)
         {
-            if (constructor.Parameters is [] && union.UserSettings.GeneratePrivateConstructor is true)
+            if (union.UserSettings.GeneratePrivateConstructor is true)
             {
                 var constructorDefinedDiagnostic = DiagnosticHelper.Create(
                     DiagnosticHelper.ConstructorAlreadyDefined,
@@ -111,11 +124,6 @@ internal class DiscriminatedUnionAnalyzer : DiagnosticAnalyzer
                 union.Analysis.ReportDiagnostic(privateConstructorDiagnostic);
             }
         }
-
-        var parameterlessConstructor = union.Symbol.Constructors
-            .FirstOrDefault(constructor => 
-                constructor is { Parameters: [], IsImplicitlyDeclared: false }
-            );
 
         var nonPartialSyntax = union.Symbol.DeclaringSyntaxReferences
             .Select(syntaxReference => syntaxReference.GetSyntax())
@@ -143,6 +151,8 @@ internal class DiscriminatedUnionAnalyzer : DiagnosticAnalyzer
 
             union.Analysis.ReportDiagnostic(languageVersionDiagnostic);
         }
+
+        AnalyzeJsonPolymorphic(union);
     }
 
     private static void AnalyzeJsonPolymorphic(UnionContext union)
@@ -177,8 +187,7 @@ internal class DiscriminatedUnionAnalyzer : DiagnosticAnalyzer
 
     private static void AnalyzeUnionMembers(UnionContext union)
     {
-        var memberSymbols = union.Symbol.GetTypeMembers()
-            .Where(member => SymbolEquals(member.BaseType, union.Symbol))
+        var memberSymbols = union.Symbol.GetDerivedTypeSymbols()
             .ToImmutableArray();
 
         if (memberSymbols is [])
@@ -268,8 +277,6 @@ internal class DiscriminatedUnionAnalyzer : DiagnosticAnalyzer
 
         return unionContext;
     }
-
-    private static bool SymbolEquals(ISymbol? first, ISymbol? second) => SymbolEqualityComparer.Default.Equals(first, second);
 
     private readonly record struct ConstantSymbols(
         INamedTypeSymbol DiscriminatedUnionAttribute,

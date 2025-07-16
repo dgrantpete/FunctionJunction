@@ -17,7 +17,7 @@ namespace FunctionJunction.Generator.Analyzers;
 internal class DiscriminatedUnionFixProvider : CodeFixProvider
 {
     public override ImmutableArray<string> FixableDiagnosticIds => [..
-        IterateDiagnostics()
+        IterateFixableDiagnostics()
             .Select(diagnostic => diagnostic.Id)
     ];
 
@@ -144,18 +144,9 @@ internal class DiscriminatedUnionFixProvider : CodeFixProvider
                     cancellationToken
                 )
             );
-
-            RegisterFix(
-                $"Remove parameterless constructor",
-                cancellationToken => RemoveConstructor(
-                    diagnosticNode,
-                    document,
-                    cancellationToken
-                )
-            );
         }
 
-        if (diagnostic.Id == ConstructorNotPrivate.Id)
+        if (diagnostic.Id == ConstructorNotPrivate.Id && diagnosticNode is ConstructorDeclarationSyntax)
         {
             RegisterFix(
                 "Make constructor 'private'",
