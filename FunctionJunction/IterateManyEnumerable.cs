@@ -2,6 +2,11 @@
 
 namespace FunctionJunction;
 
+/// <summary>
+/// Provides an enumerable that traverses hierarchical data structures using different traversal strategies.
+/// Supports parent-first/children-first ordering and breadth-first/depth-first traversal patterns.
+/// </summary>
+/// <typeparam name="T">The type of elements in the enumerable.</typeparam>
 public record IterateManyEnumerable<T> : IEnumerable<T>
 {
     private readonly T seed;
@@ -18,14 +23,34 @@ public record IterateManyEnumerable<T> : IEnumerable<T>
         this.iterator = iterator;
     }
 
+    /// <summary>
+    /// Returns a new enumerable that visits parent nodes before their children.
+    /// </summary>
+    /// <returns>A new <see cref="IterateManyEnumerable{T}"/> configured for parent-first traversal.</returns>
     public IterateManyEnumerable<T> WithParentFirst() => this with { ChildrenFirst = false };
 
+    /// <summary>
+    /// Returns a new enumerable that visits children nodes before their parents.
+    /// </summary>
+    /// <returns>A new <see cref="IterateManyEnumerable{T}"/> configured for children-first traversal.</returns>
     public IterateManyEnumerable<T> WithChildrenFirst() => this with { ChildrenFirst = true };
 
+    /// <summary>
+    /// Returns a new enumerable that traverses nodes level by level (breadth-first).
+    /// </summary>
+    /// <returns>A new <see cref="IterateManyEnumerable{T}"/> configured for breadth-first traversal.</returns>
     public IterateManyEnumerable<T> WithBreadthFirst() => this with { DepthFirst = false };
 
+    /// <summary>
+    /// Returns a new enumerable that traverses nodes by going as deep as possible before backtracking (depth-first).
+    /// </summary>
+    /// <returns>A new <see cref="IterateManyEnumerable{T}"/> configured for depth-first traversal.</returns>
     public IterateManyEnumerable<T> WithDepthFirst() => this with { DepthFirst = true };
 
+    /// <summary>
+    /// Returns an enumerator that iterates through the collection using the configured traversal strategy.
+    /// </summary>
+    /// <returns>An <see cref="IEnumerator{T}"/> for the collection.</returns>
     public IEnumerator<T> GetEnumerator() => (ChildrenFirst, DepthFirst) switch
     {
         (false, false) => IterateParentFirstBreadth(seed, iterator),
