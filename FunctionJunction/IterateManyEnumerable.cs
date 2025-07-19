@@ -63,16 +63,16 @@ public record IterateManyEnumerable<T> : IEnumerable<T>
 
     private static IEnumerator<T> IterateParentFirstBreadth(T seed, Func<T, IEnumerable<T>> iterator)
     {
-        var nextValues = new Queue<T>([seed]);
+        var nextValues = new Queue<IEnumerable<T>>([[seed]]);
 
-        while (nextValues.Count is > 0)
+        while (nextValues.Count > 0)
         {
-            var value = nextValues.Dequeue();
-            yield return value;
-
-            foreach (var child in iterator(value))
+            var values = nextValues.Dequeue();
+            
+            foreach (var value in values)
             {
-                nextValues.Enqueue(child);
+                yield return value;
+                nextValues.Enqueue(iterator(value));
             }
         }
     }
@@ -101,48 +101,78 @@ public record IterateManyEnumerable<T> : IEnumerable<T>
 
     private static IEnumerator<T> IterateParentFirstDepth(T seed, Func<T, IEnumerable<T>> iterator)
     {
-        var stack = new Stack<T>([seed]);
+        var seedEnumerator = CreateSingletonEnumerator(seed);
+        var enumerators = new Stack<IEnumerator<T>>([seedEnumerator]);
 
-        while (stack.Count > 0)
+        try
         {
-            var current = stack.Pop();
-            yield return current;
-
-            var children = iterator(current).Reverse().ToArray();
-            foreach (var child in children)
+            while (enumerators.Count > 0)
             {
-                stack.Push(child);
+                var currentEnumerator = enumerators.Peek();
+
+                if (!currentEnumerator.MoveNext())
+                {
+                    enumerators.Pop();
+                    currentEnumerator.Dispose();
+                    continue;
+                }
+
+                yield return currentEnumerator.Current;
+
+                enumerators.Push(iterator(currentEnumerator.Current).GetEnumerator());
+            }
+        }
+        finally
+        {
+            foreach (var enumerator in enumerators)
+            {
+                enumerator.Dispose();
             }
         }
     }
 
     private static IEnumerator<T> IterateChildrenFirstDepth(T seed, Func<T, IEnumerable<T>> iterator)
     {
-        var visited = new HashSet<T>();
-        var stack = new Stack<T>([seed]);
-        var result = new List<T>();
+        var enumerators = new Stack<IEnumerator<T>>();
+        var currentEnumerator = CreateSingletonEnumerator(seed);
 
-        void Visit(T node)
+        try
         {
-            if (visited.Contains(node))
-                return;
-
-            visited.Add(node);
-            var children = iterator(node).ToArray();
-            
-            foreach (var child in children)
+            while (true)
             {
-                Visit(child);
-            }
-            
-            result.Add(node);
-        }
+                if (currentEnumerator.MoveNext())
+                {
+                    var nextEnumerator = iterator(currentEnumerator.Current).GetEnumerator();
 
-        Visit(seed);
-        
-        foreach (var item in result)
-        {
-            yield return item;
+                    enumerators.Push(currentEnumerator);
+                    currentEnumerator = nextEnumerator;
+
+                    continue;
+                }
+
+                currentEnumerator.Dispose();
+
+                if (enumerators.Count <= 0)
+                {
+                    break;
+                }
+
+                currentEnumerator = enumerators.Pop();
+
+                yield return currentEnumerator.Current;
+            }
         }
+        finally
+        {
+            foreach (var enumerator in enumerators.Append(currentEnumerator))
+            {
+                enumerator.Dispose();
+            }
+        }
+    }
+
+    private static IEnumerator<T> CreateSingletonEnumerator(T value)
+    {
+        yield return value;
     }
 }
