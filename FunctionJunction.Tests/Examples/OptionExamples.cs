@@ -57,7 +57,7 @@ public class OptionExamples
         Option<int> TryDiv(int dividend, int divisor) => divisor switch
         {
             0 => default,
-            _ => dividend / divisor
+            _ => Option.Some(dividend / divisor)
         };
 
         var successfulDivision = someValue.FlatMap(x => TryDiv(x, 1));
