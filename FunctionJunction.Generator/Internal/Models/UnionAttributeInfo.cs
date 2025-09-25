@@ -89,7 +89,7 @@ internal readonly record struct UnionAttributeInfo
                 return null;
             }
 
-            if (!Enum.TryParse<T>(text, out T value))
+            if (!Enum.TryParse<T>(text, out var value))
             {
                 return null;
             }

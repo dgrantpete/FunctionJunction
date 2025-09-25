@@ -17,13 +17,13 @@ public class DiscriminatedUnionAttribute : Attribute
     public MatchUnionOn MatchOn { get; set; } = MatchUnionOn.Type;
 
     /// <summary>
-    /// <para>Whether or not to generate polymorphic serialization attributes (<c>JsonDerivedType</c>) for the members of the discriminated union.</para>
+    /// <para>Whether to generate polymorphic serialization attributes (<c>JsonDerivedType</c>) for the members of the discriminated union.</para>
     /// <para>Any members which have <c>JsonDerivedType</c> already specified will be skipped during generation.</para>
     /// </summary>
     public bool GeneratePolymorphicSerialization { get; set; } = true;
 
     /// <summary>
-    /// Whether or not a private constructor should be generated for this discriminated union (this prevents anybody outside of the union from adding more members).
+    /// Whether a private constructor should be generated for this discriminated union (this prevents anybody outside of the union from adding more members).
     /// </summary>
     public bool GeneratePrivateConstructor { get; set; } = true;
 }

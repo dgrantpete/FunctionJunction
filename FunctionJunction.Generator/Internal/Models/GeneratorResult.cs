@@ -4,19 +4,12 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace FunctionJunction.Generator.Internal.Models;
 
-internal readonly record struct GeneratorResult<T> : IEquatable<GeneratorResult<T>> where T : notnull
+internal readonly record struct GeneratorResult<T>(T Value) : IEquatable<GeneratorResult<T>>
+    where T : notnull
 {
-    public bool IsSuccess { get; }
-
-    public T Value { get; }
+    public bool IsSuccess { get; } = true;
 
     public EquatableArray<Diagnostic> Diagnostics { get; init; }
-
-    public GeneratorResult(T value)
-    {
-        IsSuccess = true;
-        Value = value;
-    }
 
     public static implicit operator GeneratorResult<T>(T value) => new(value);
 
@@ -61,7 +54,7 @@ internal readonly record struct GeneratorResult<T> : IEquatable<GeneratorResult<
     {
         if (TryGetValue(out var value))
         {
-            return new(mapper(value!))
+            return new(mapper(value))
             {
                 Diagnostics = Diagnostics
             };
@@ -130,7 +123,7 @@ internal static class GeneratorResult
 
         return maybeOkValues switch
         {
-            { } okValues => new GeneratorResult<ImmutableArray<T>>(okValues.DrainToImmutable())
+            not null => new GeneratorResult<ImmutableArray<T>>(maybeOkValues.DrainToImmutable())
             {
                 Diagnostics = diagnostics.DrainToImmutable()
             },
@@ -155,7 +148,7 @@ internal static class GeneratorResult
     =>
         maybeValue switch
         {
-            { } value => Ok(value),
+            not null => Ok(maybeValue),
             _ => Error<T>(diagnosticsProvider())
         };
 }

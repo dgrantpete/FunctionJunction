@@ -66,7 +66,7 @@ public static class Prelude
     public static Func<T> Const<T>(T value) => () => value;
 
     /// <summary>Creates a function that always returns the specified constant value, ignoring its single parameter.</summary>
-    public static Func<T1, T> Const<T, T1>(T value) => (_) => value;
+    public static Func<T1, T> Const<T, T1>(T value) => _ => value;
 
     /// <summary>Creates a function that always returns the specified constant value, ignoring its two parameters.</summary>
     public static Func<T1, T2, T> Const<T, T1, T2>(T value) => (_, _) => value;

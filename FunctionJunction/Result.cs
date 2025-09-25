@@ -35,7 +35,7 @@ public partial record Result<TOk, TError>
         /// <summary>
         /// Gets the successful value contained in this <c>Ok</c> result.
         /// </summary>
-        public TOk Value { get; internal init; }
+        public TOk Value { get; }
 
         internal Ok(TOk value)
         {
@@ -60,7 +60,7 @@ public partial record Result<TOk, TError>
         /// <summary>
         /// Gets the error value contained in this <c>Error</c> result.
         /// </summary>
-        public TError Value { get; internal init; }
+        public TError Value { get; }
 
         internal Error(TError value)
         {
@@ -82,14 +82,14 @@ public partial record Result<TOk, TError>
     /// </summary>
     /// <param name="ok">The value being converted.</param>
     public static implicit operator Result<TOk, TError>(TOk ok) =>
-        new Result<TOk, TError>.Ok(ok);
+        new Ok(ok);
 
     /// <summary>
     /// Implicitly converts a <typeparamref name="TError"/> into an <c>Error</c> value inside a <see cref="Result{TOk, TError}"/>.
     /// </summary>
     /// <param name="error">The value being converted.</param>
     public static implicit operator Result<TOk, TError>(TError error) =>
-        new Result<TOk, TError>.Error(error);
+        new Error(error);
 
     /// <summary>
     /// Applies a function that returns a <see cref="Result{TOk, TError}"/> to the success value inside this <see cref="Result{TOk, TError}"/>, flattening the result.
@@ -220,7 +220,7 @@ public partial record Result<TOk, TError>
         FlatMap(ok => validator(ok) switch
         {
             true => this,
-            false => new Result<TOk, TError>.Error(errorMapper(ok))
+            false => new Error(errorMapper(ok))
         });
 
     /// <summary>
@@ -236,7 +236,7 @@ public partial record Result<TOk, TError>
         FlatMap(async ok => await validatorAsync(ok).ConfigureAwait(false) switch
         {
             true => this,
-            false => new Result<TOk, TError>.Error(await errorMapperAsync(ok).ConfigureAwait(false))
+            false => new Error(await errorMapperAsync(ok).ConfigureAwait(false))
         });
 
     /// <summary>
@@ -586,7 +586,7 @@ public static class Result
 
     /// <summary>
     /// Extracts the success value from the <see cref="Result{TOk, TError}"/> if it contains one, otherwise throws the error value directly as an exception.
-    /// Useful when the error type is already an exception and you want to throw it directly.
+    /// Useful when the error type is already an exception, and you want to throw it directly.
     /// </summary>
     /// <typeparam name="TOk">The type of the success value.</typeparam>
     /// <typeparam name="TException">The exception type that serves as the error value. Must inherit from <see cref="Exception"/>.</typeparam>

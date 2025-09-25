@@ -65,7 +65,6 @@
 	</Target>
 	
 	<ItemGroup>
-		<None Include="../FunctionJunction.props" Pack="true" PackagePath="build/" Visible="false" />
 		<None Include="../FunctionJunction.props" Pack="true" PackagePath="buildTransitive/" Visible="false" />
 	</ItemGroup>
 

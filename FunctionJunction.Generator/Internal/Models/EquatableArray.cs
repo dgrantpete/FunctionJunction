@@ -39,12 +39,7 @@ internal readonly record struct EquatableArray<T>(ImmutableArray<T> Array) : IRe
     {
         unchecked
         {
-            var hash = 17;
-            foreach (var element in Array)
-            {
-                hash = hash * 31 + (element?.GetHashCode() ?? 0);
-            }
-            return hash;
+            return Enumerable.Aggregate(Array, 17, (current, element) => current * 31 + (element?.GetHashCode() ?? 0));
         }
     }
 
