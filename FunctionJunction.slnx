@@ -11,6 +11,9 @@
     <File Path="Directory.Build.props" />
     <File Path="Directory.Packages.props" />
     <File Path="FunctionJunction.props" />
+  	<File Path="FunctionJunction.Generator/FunctionJunction.Generator.csproj"/>
+  	<File Path="FunctionJunction.Tests/FunctionJunction.Tests.csproj"/>
+    <File Path="FunctionJunction/FunctionJunction.csproj"/>
   </Folder>
   <Folder Name="/Github/">
     <File Path=".github/workflows/publish-nuget-package.yml" />
