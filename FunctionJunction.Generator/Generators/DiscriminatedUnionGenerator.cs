@@ -185,12 +185,12 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
                 methodSymbol is { ReturnsVoid: true, Name: "Deconstruct", IsGenericMethod: false }
             );
 
-        if (maybeDeconstructSymbol is not { } deconstructSymbol || memberSymbol.GetAccessibility() is not { } accessibility)
+        if (maybeDeconstructSymbol is null || memberSymbol.GetAccessibility() is not { } accessibility)
         {
             return null;
         }
 
-        var parameters = deconstructSymbol.Parameters
+        var parameters = maybeDeconstructSymbol.Parameters
             .Select(parameter =>
                 new ParameterInfo(parameter.Name, SymbolId.Create(parameter))
             )
@@ -207,10 +207,8 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (compilation.GetTypeByMetadataName(DiscriminatedUnion.AttributeName) is not INamedTypeSymbol unionAttribute)
+        if (compilation.GetTypeByMetadataName(DiscriminatedUnion.AttributeName) is not { } unionAttribute)
         {
-            var types = compilation.GetTypesByMetadataName(DiscriminatedUnion.AttributeName);
-
             throw new InvalidOperationException($"The symbol for {nameof(DiscriminatedUnionAttribute)} could not be loaded.");
         }
 
@@ -276,8 +274,6 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
             return memberContext;
         }
 
-        var generatePrivateConstructor = context.Settings.GeneratePrivateConstructor;
-
         return new(
             unionInfo.Name,
             unionInfo.Accessibility,
@@ -311,17 +307,12 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
             return [];
         }
 
-        if (matchOn is MatchUnionOn.Deconstruct)
+        return matchOn switch
         {
-            return CreateDeconstructMatchModel(memberContexts, context, cancellationToken);
-        }
-
-        if (matchOn is MatchUnionOn.Type)
-        {
-            return CreateTypeMatchModel(memberContexts, cancellationToken);
-        }
-
-        return [];
+            MatchUnionOn.Deconstruct => CreateDeconstructMatchModel(memberContexts, context, cancellationToken),
+            MatchUnionOn.Type => CreateTypeMatchModel(memberContexts, cancellationToken),
+            _ => []
+        };
     }
 
     private static ImmutableArray<MatchRenderModel> CreateTypeMatchModel(
@@ -432,7 +423,7 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
         
         if (
             !context.Settings.GeneratePolymorphicSerialization
-                || context.Symbols.JsonDerivedTypeAttribute is not { } derivedTypeAttributeSymbol
+                || context.Symbols.JsonDerivedTypeAttribute is null 
                 || unionSymbol.IsGenericType
         )
         {
@@ -440,7 +431,7 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
         }
 
         return memberContexts.Where(memberContext => !memberContext.HasDerivedTypeAttribute)
-            .Select(memberContext => $"[{JsonDerivedTypeAttribute}(typeof({memberContext.Type}))]");
+            .Select(memberContext => $"[{JsonDerivedTypeAttribute}(typeof({memberContext.Type}), \"{memberContext.Name}\")]");
     }
 
     #endregion

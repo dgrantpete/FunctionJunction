@@ -516,10 +516,10 @@ internal class AsyncExtensionMethodGenerator : IIncrementalGenerator
             );
 
         public readonly AttributeInfo Or(AttributeInfo? other) =>
-            this with
+            new AttributeInfo
             {
-                ExtensionClassName = ExtensionClassName ?? other?.ExtensionClassName,
-                ExtensionMethodName = ExtensionMethodName ?? other?.ExtensionMethodName,
+                ExtensionClassName = ExtensionClassName ?? other?.ExtensionClassName, 
+                ExtensionMethodName = ExtensionMethodName ?? other?.ExtensionMethodName, 
                 Namespace = Namespace ?? other?.Namespace
             };
     }
