@@ -443,7 +443,8 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
         public static SymbolDisplayFormat Qualified { get; } =
             new(
                 typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces,
-                genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters
+                genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters,
+                globalNamespaceStyle: SymbolDisplayGlobalNamespaceStyle.Included
             );
 
         public static SymbolDisplayFormat Unqualified { get; } =

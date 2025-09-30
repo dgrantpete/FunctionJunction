@@ -2,7 +2,7 @@
 
 internal static class TypeName
 {
-    public const string Func = "System.Func";
+    public const string Func = "global::System.Func";
 
-    public const string JsonDerivedTypeAttribute = "System.Text.Json.Serialization.JsonDerivedTypeAttribute";
+    public const string JsonDerivedTypeAttribute = "global::System.Text.Json.Serialization.JsonDerivedTypeAttribute";
 }
