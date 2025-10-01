@@ -4,6 +4,6 @@ namespace FunctionJunction.Generator.Internal.Models;
 
 internal readonly record struct UnionSettings(
     MatchUnionOn MatchOn,
-    bool GeneratePolymorphicSerialization,
+    JsonPolymorphism JsonPolymorphism,
     bool GeneratePrivateConstructor
 );

@@ -420,10 +420,10 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
     )
     {
         cancellationToken.ThrowIfCancellationRequested();
-        
+
         if (
-            !context.Settings.GeneratePolymorphicSerialization
-                || context.Symbols.JsonDerivedTypeAttribute is null 
+            context.Settings.JsonPolymorphism is JsonPolymorphism.Disabled
+                || context.Symbols.JsonDerivedTypeAttribute is null
                 || unionSymbol.IsGenericType
         )
         {
@@ -431,7 +431,11 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
         }
 
         return memberContexts.Where(memberContext => !memberContext.HasDerivedTypeAttribute)
-            .Select(memberContext => $"[{JsonDerivedTypeAttribute}(typeof({memberContext.Type}), \"{memberContext.Name}\")]");
+            .Select(memberContext =>
+            {
+                var discriminatorValue = memberContext.Name.ApplyJsonPolymorphism(context.Settings.JsonPolymorphism);
+                return $"[{JsonDerivedTypeAttribute}(typeof({memberContext.Type}), \"{discriminatorValue}\")]";
+            });
     }
 
     #endregion

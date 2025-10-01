@@ -1,5 +1,7 @@
-﻿using FunctionJunction.Generator.Internal.Models;
+﻿using FunctionJunction.Generator.Internal.Attributes;
+using FunctionJunction.Generator.Internal.Models;
 using Microsoft.CodeAnalysis;
+using System.Text.Json;
 using Accessibility = FunctionJunction.Generator.Internal.Models.Accessibility;
 using ExternalAccessibility = Microsoft.CodeAnalysis.Accessibility;
 
@@ -34,5 +36,17 @@ internal static class SymbolHelper
     {
         [var first, .. var rest] => char.ToLowerInvariant(first) + rest,
         _ => pascalCase
+    };
+
+    public static string ApplyJsonPolymorphism(this string typeName, JsonPolymorphism polymorphism) => polymorphism switch
+    {
+        JsonPolymorphism.Disabled => typeName,
+        JsonPolymorphism.Enabled => typeName,
+        JsonPolymorphism.CamelCase => JsonNamingPolicy.CamelCase.ConvertName(typeName),
+        JsonPolymorphism.SnakeCaseLower => JsonNamingPolicy.SnakeCaseLower.ConvertName(typeName),
+        JsonPolymorphism.SnakeCaseUpper => JsonNamingPolicy.SnakeCaseUpper.ConvertName(typeName),
+        JsonPolymorphism.KebabCaseLower => JsonNamingPolicy.KebabCaseLower.ConvertName(typeName),
+        JsonPolymorphism.KebabCaseUpper => JsonNamingPolicy.KebabCaseUpper.ConvertName(typeName),
+        _ => typeName
     };
 }

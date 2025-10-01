@@ -157,7 +157,7 @@ internal class DiscriminatedUnionAnalyzer : DiagnosticAnalyzer
 
     private static void AnalyzeJsonPolymorphic(UnionContext union)
     {
-        if (union.UserSettings.GeneratePolymorphicSerialization is not true)
+        if (union.UserSettings.JsonPolymorphism is null or JsonPolymorphism.Disabled)
         {
             return;
         }

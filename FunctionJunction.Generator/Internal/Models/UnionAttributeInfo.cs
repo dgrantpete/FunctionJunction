@@ -11,7 +11,7 @@ internal readonly record struct UnionAttributeInfo
 {
     public MatchUnionOn? MatchOn { get; init; }
 
-    public bool? GeneratePolymorphicSerialization { get; init; }
+    public JsonPolymorphism? JsonPolymorphism { get; init; }
 
     public bool? GeneratePrivateConstructor { get; init; }
 
@@ -29,8 +29,8 @@ internal readonly record struct UnionAttributeInfo
         {
             MatchOn = (MatchUnionOn?)(unionArguments.GetValueOrDefault(nameof(DiscriminatedUnionAttribute.MatchOn))
                 ?.Value as int?),
-            GeneratePolymorphicSerialization = unionArguments.GetValueOrDefault(nameof(DiscriminatedUnionAttribute.GeneratePolymorphicSerialization))
-                ?.Value as bool?,
+            JsonPolymorphism = (JsonPolymorphism?)(unionArguments.GetValueOrDefault(nameof(DiscriminatedUnionAttribute.JsonPolymorphism))
+                ?.Value as int?),
             GeneratePrivateConstructor = unionArguments.GetValueOrDefault(nameof(DiscriminatedUnionAttribute.GeneratePrivateConstructor))
                 ?.Value as bool?
         };
@@ -51,8 +51,8 @@ internal readonly record struct UnionAttributeInfo
         );
 
         options.TryGetValue(
-            PropertyPrefix + nameof(DiscriminatedUnionAttribute.GeneratePolymorphicSerialization),
-            out var polymorphicSerialization
+            PropertyPrefix + nameof(DiscriminatedUnionAttribute.JsonPolymorphism),
+            out var jsonPolymorphism
         );
 
         options.TryGetValue(
@@ -63,7 +63,7 @@ internal readonly record struct UnionAttributeInfo
         return new()
         {
             MatchOn = TryParseEnum<MatchUnionOn>(match),
-            GeneratePolymorphicSerialization = TryParseBool(polymorphicSerialization),
+            JsonPolymorphism = TryParseEnum<JsonPolymorphism>(jsonPolymorphism),
             GeneratePrivateConstructor = TryParseBool(privateConstructor)
         };
 
@@ -111,11 +111,14 @@ internal readonly record struct UnionAttributeInfo
             );
         }
 
-        if (GeneratePolymorphicSerialization is { } polymorphicSerialization)
+        if (JsonPolymorphism is { } jsonPolymorphism)
         {
             yield return generator.AttributeArgument(
-                nameof(DiscriminatedUnionAttribute.GeneratePolymorphicSerialization),
-                generator.LiteralExpression(polymorphicSerialization)
+                nameof(DiscriminatedUnionAttribute.JsonPolymorphism),
+                generator.MemberAccessExpression(
+                    generator.IdentifierName(nameof(JsonPolymorphism)),
+                    jsonPolymorphism.ToString()
+                )
             );
         }
 
@@ -132,14 +135,14 @@ internal readonly record struct UnionAttributeInfo
         this with
         {
             MatchOn = MatchOn ?? other.MatchOn,
-            GeneratePolymorphicSerialization = GeneratePolymorphicSerialization ?? other.GeneratePolymorphicSerialization,
+            JsonPolymorphism = JsonPolymorphism ?? other.JsonPolymorphism,
             GeneratePrivateConstructor = GeneratePrivateConstructor ?? other.GeneratePrivateConstructor
         };
 
     public UnionSettings ToSettings() =>
         new(
             MatchOn ?? DiscriminatedUnion.DefaultInstance.MatchOn,
-            GeneratePolymorphicSerialization ?? DiscriminatedUnion.DefaultInstance.GeneratePolymorphicSerialization,
+            JsonPolymorphism ?? DiscriminatedUnion.DefaultInstance.JsonPolymorphism,
             GeneratePrivateConstructor ?? DiscriminatedUnion.DefaultInstance.GeneratePrivateConstructor
         );
 }

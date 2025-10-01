@@ -88,11 +88,11 @@ internal class DiscriminatedUnionFixProvider : CodeFixProvider
         if (diagnostic.Id == DerivedTypeAttributeNotFound.Id || diagnostic.Id == GenericsIncompatibleWithSerialization.Id)
         {
             RegisterFix(
-                $"Set '{nameof(DiscriminatedUnionAttribute.GeneratePolymorphicSerialization)}' to 'false'",
+                $"Set '{nameof(DiscriminatedUnionAttribute.JsonPolymorphism)}' to '{nameof(JsonPolymorphism.Disabled)}'",
                 cancellationToken => UpdateAttributeArguments(
                     new UnionAttributeInfo
                     {
-                        GeneratePolymorphicSerialization = false
+                        JsonPolymorphism = JsonPolymorphism.Disabled
                     },
                     diagnosticNode,
                     document,

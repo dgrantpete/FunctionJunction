@@ -27,8 +27,8 @@ internal static class DiagnosticHelper
     public static DiagnosticDescriptor DerivedTypeAttributeNotFound { get; } = new(
         id: "FJ0003",
         title: $"{nameof(TypeName.JsonDerivedTypeAttribute)} not found",
-        messageFormat: $"'{TypeName.JsonDerivedTypeAttribute}' was not found but '{nameof(DiscriminatedUnionAttribute.GeneratePolymorphicSerialization)}' was set to 'true' for '{{0}}'; " +
-        $"install a version of 'System.Text.Json' that supports polymorphic serialization or set '{nameof(DiscriminatedUnionAttribute.GeneratePolymorphicSerialization)}' to 'false'",
+        messageFormat: $"'{TypeName.JsonDerivedTypeAttribute}' was not found but '{nameof(DiscriminatedUnionAttribute.JsonPolymorphism)}' is enabled for '{{0}}'; " +
+        $"install a version of 'System.Text.Json' that supports polymorphic serialization or set '{nameof(DiscriminatedUnionAttribute.JsonPolymorphism)}' to '{nameof(JsonPolymorphism.Disabled)}'",
         category: "Usage",
         DiagnosticSeverity.Warning,
         isEnabledByDefault: true
@@ -48,7 +48,7 @@ internal static class DiagnosticHelper
         id: "FJ0005",
         title: $"Can't generate {nameof(TypeName.JsonDerivedTypeAttribute)} for generic type",
         messageFormat: $"'{TypeName.JsonDerivedTypeAttribute}' cannot be generated for the generic discriminated union '{{0}}'; " +
-        $"set '{nameof(DiscriminatedUnionAttribute.GeneratePolymorphicSerialization)}' to 'false'",
+        $"set '{nameof(DiscriminatedUnionAttribute.JsonPolymorphism)}' to '{nameof(JsonPolymorphism.Disabled)}'",
         category: "Usage",
         DiagnosticSeverity.Warning,
         isEnabledByDefault: true

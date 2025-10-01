@@ -17,6 +17,7 @@
 		<PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="$(RoslynVersion)" />
 		<PackageVersion Include="Microsoft.CSharp" Version="4.7.0" />
 		<PackageVersion Include="Scriban" Version="6.2.1" />
+		<PackageVersion Include="System.Text.Json" Version="8.0.5" />
 
 		<!-- Test project dependencies -->
 		<PackageVersion Include="coverlet.collector" Version="6.0.4" />
