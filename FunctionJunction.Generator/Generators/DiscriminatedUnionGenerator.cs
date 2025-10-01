@@ -434,7 +434,7 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
             .Select(memberContext =>
             {
                 var discriminatorValue = memberContext.Name.ApplyJsonPolymorphism(context.Settings.JsonPolymorphism);
-                return $"[{JsonDerivedTypeAttribute}(typeof({memberContext.Type}), \"{discriminatorValue}\")]";
+                return $"[{TypeName.JsonDerivedTypeAttributeFullyQualified}(typeof({memberContext.Type}), \"{discriminatorValue}\")]";
             });
     }
 
