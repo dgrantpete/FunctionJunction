@@ -61,6 +61,22 @@ public readonly record struct Option<T> where T : notnull
         };
 
     /// <summary>
+    /// Performs pattern matching on the <see cref="Option{T}"/>, executing one of two provided actions based on whether the <see cref="Option{T}"/> contains a value.
+    /// </summary>
+    /// <param name="onSome">The action to execute if the <see cref="Option{T}"/> contains a value. Receives the contained value as a parameter.</param>
+    /// <param name="onNone">The action to execute if the <see cref="Option{T}"/> does not contain a value.</param>
+    public void Match(Action<T> onSome, Action onNone)
+    {
+        if (IsSome)
+        {
+            onSome(internalValue);
+            return;
+        }
+        
+        onNone();
+    }
+
+    /// <summary>
     /// Applies a function that returns an <see cref="Option{T}"/> to the value inside this <see cref="Option{T}"/>, flattening the result.
     /// This is the monadic bind operation for <see cref="Option{T}"/>. If this <see cref="Option{T}"/> is <c>None</c>, returns <c>None</c> without calling the mapper.
     /// </summary>

@@ -287,6 +287,7 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
         )
         {
             MatchModel = CreateMatchModel(memberContexts, context, cancellationToken),
+            VoidMatchModel = CreateVoidMatchModel(memberContexts, context, cancellationToken),
             PolymorphicAttributes = CreatePolymorphicAttributes(memberContexts, unionSymbol, context, cancellationToken)
                 .ToImmutableArray()
         };
@@ -438,6 +439,97 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
             });
     }
 
+    private static ImmutableArray<VoidMatchRenderModel> CreateVoidMatchModel(
+        IEnumerable<MemberRenderContext> memberContexts,
+        RenderContext context,
+        CancellationToken cancellationToken = default
+    )
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var matchOn = context.Settings.MatchOn;
+
+        if (context.Compilation is not CSharpCompilation { LanguageVersion: >= LanguageVersion.CSharp8 })
+        {
+            return [];
+        }
+
+        return matchOn switch
+        {
+            MatchUnionOn.Deconstruct => CreateDeconstructVoidMatchModel(memberContexts, context, cancellationToken),
+            MatchUnionOn.Type => CreateTypeVoidMatchModel(memberContexts, cancellationToken),
+            _ => []
+        };
+    }
+
+    private static ImmutableArray<VoidMatchRenderModel> CreateTypeVoidMatchModel(
+        IEnumerable<MemberRenderContext> memberContexts,
+        CancellationToken cancellationToken = default
+    )
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return [.. memberContexts.Select(CreateModel)];
+
+        VoidMatchRenderModel CreateModel(MemberRenderContext memberContext)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var parameterName = $"on{memberContext.Name}";
+            var actionType = $"global::System.Action<{memberContext.Type}>";
+            var parameter = $"{actionType} {parameterName}";
+
+            var typeName = memberContext.Name.ToCamelCase();
+            var matchArm = $"{memberContext.Type} {typeName}";
+            var invocation = $"on{memberContext.Name}({typeName})";
+
+            return new(memberContext.Name, parameter, matchArm, invocation);
+        }
+    }
+
+    private static ImmutableArray<VoidMatchRenderModel> CreateDeconstructVoidMatchModel(
+        IEnumerable<MemberRenderContext> memberContexts,
+        RenderContext context,
+        CancellationToken cancellationToken = default
+    )
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return [.. memberContexts.Select(CreateModel)];
+
+        VoidMatchRenderModel CreateModel(MemberRenderContext memberContext)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var deconstructInfo = memberContext.DeconstructInfo
+                ?? new([], memberContext.Accessibility);
+
+            var renderedTypes = deconstructInfo.Parameters
+                .Select(parameter => parameter.Type.Resolve(context.Compilation))
+                .Select(parameterSymbol => parameterSymbol.Type.ToDisplayString(DisplayFormat.Qualified));
+
+            var parameterName = $"on{memberContext.Name}";
+            var actionType = deconstructInfo.Parameters.Count is 0
+                ? "global::System.Action"
+                : $"global::System.Action<{string.Join(", ", renderedTypes)}>";
+            
+            var parameter = $"{actionType} {parameterName}";
+
+            var parameterNames = deconstructInfo.Parameters.Select(p => p.Name.ToCamelCase());
+            var invocationParameters = string.Join(", ", parameterNames);
+            var patternParameters = string.Join(", ", parameterNames.Select(name => $"var {name}"));
+
+            var matchArm = invocationParameters switch
+            {
+                "" => memberContext.Type,
+                _ => $"{memberContext.Type}({patternParameters})"
+            };
+            var invocation = $"on{memberContext.Name}({invocationParameters})";
+
+            return new(memberContext.Name, parameter, matchArm, invocation);
+        }
+    }
+
     #endregion
 
     #region Code Rendering
@@ -521,6 +613,8 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
     {
         public EquatableArray<MatchRenderModel> MatchModel { get; init; } = [];
 
+        public EquatableArray<VoidMatchRenderModel> VoidMatchModel { get; init; } = [];
+
         public EquatableArray<string> PolymorphicAttributes { get; init; } = [];
     }
 
@@ -528,6 +622,13 @@ internal class DiscriminatedUnionGenerator : IIncrementalGenerator
         string MemberName,
         string Parameter,
         string MatchArm
+    );
+
+    private readonly record struct VoidMatchRenderModel(
+        string MemberName,
+        string Parameter,
+        string MatchArm,
+        string Invocation
     );
 
     private readonly record struct ConstantSymbols(INamedTypeSymbol UnionAttribute)

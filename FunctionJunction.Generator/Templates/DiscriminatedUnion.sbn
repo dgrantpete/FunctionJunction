@@ -32,7 +32,7 @@ namespace {{ namespace }}
             {{~ for match in match_model ~}}
             {{ match.parameter }}{{ if !for.last }},{{ end }}
             {{~ end ~}}
-        ) => 
+        ) =>
             this switch
             {
                 {{~ for match in match_model ~}}
@@ -40,6 +40,34 @@ namespace {{ namespace }}
                 {{~ end ~}}
                 _ => throw new InvalidOperationException($"Type '{this.GetType()}' was not a known variant of the discriminated union '{{ type }}' and was unhandled")
             };
+
+        {{~ end ~}}
+        {{~ if (array.size void_match_model) > 0 ~}}
+        /// <summary>
+        /// Matches the current instance against all possible variants of the <c>{{ name }}</c> discriminated union
+        /// and invokes the corresponding action.
+        /// </summary>
+        {{~ for match in void_match_model ~}}
+        /// <param name="on{{ match.member_name }}">The action to invoke when the instance is of type <c>{{ match.member_name }}</c>.</param>
+        {{~ end ~}}
+        /// <exception cref="global::System.InvalidOperationException">Thrown when the instance is not a known variant of the discriminated union.</exception>
+        {{ string.downcase minimum_member_accessibility }} void Match(
+            {{~ for match in void_match_model ~}}
+            {{ match.parameter }}{{ if !for.last }},{{ end }}
+            {{~ end ~}}
+        )
+        {
+            switch (this)
+            {
+                {{~ for match in void_match_model ~}}
+                case {{ match.match_arm }}:
+                    {{ match.invocation }};
+                    break;
+                {{~ end ~}}
+                default:
+                    throw new global::System.InvalidOperationException($"Type '{this.GetType()}' was not a known variant of the discriminated union '{{ type }}' and was unhandled");
+            }
+        }
 
         {{~ end ~}}
     }
