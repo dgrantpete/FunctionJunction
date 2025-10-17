@@ -602,7 +602,7 @@ public static class Option
             }
         }
 
-        return values.DrainToImmutable();
+        return values.MoveToImmutable();
     }
 
     /// <summary>
@@ -665,7 +665,7 @@ public static class Option
             }
         }
 
-        return values.DrainToImmutable();
+        return values.MoveToImmutable();
     }
 
     /// <summary>
@@ -694,7 +694,7 @@ public static class Option
             }
         }
 
-        return values.DrainToImmutable();
+        return values.MoveToImmutable();
     }
 
     /// <summary>

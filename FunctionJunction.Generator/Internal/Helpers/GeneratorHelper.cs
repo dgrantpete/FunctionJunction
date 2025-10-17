@@ -30,7 +30,7 @@ internal static class GeneratorHelper
             resultBuilder.Add(result);
         }
 
-        return resultBuilder.DrainToImmutable();
+        return resultBuilder.MoveToImmutable();
     }
 
     public static ImmutableArray<TResult>? SelectAll<T, TResult>(this IEnumerable<T> source, Func<T, TResult?> selector) where TResult : struct
@@ -46,8 +46,8 @@ internal static class GeneratorHelper
 
             resultBuilder.Add(result);
         }
-
-        return resultBuilder.DrainToImmutable();
+        
+        return resultBuilder.MoveToImmutable();
     }
 
     public static IncrementalValuesProvider<T> WhereNotNull<T>(this IncrementalValuesProvider<T?> source) where T : class =>

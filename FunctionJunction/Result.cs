@@ -671,7 +671,7 @@ public static class Result
             result.Tap(okValues.Add);
         }
 
-        return okValues.DrainToImmutable();
+        return okValues.MoveToImmutable();
     }
 
     /// <summary>
@@ -711,7 +711,7 @@ public static class Result
             result.TapError(errors.Add);
         }
 
-        return errors.DrainToImmutable();
+        return errors.MoveToImmutable();
     }
 
     /// <summary>
@@ -740,7 +740,7 @@ public static class Result
             result.TapError(errorValues.Add);
         }
 
-        return errorValues.DrainToImmutable();
+        return errorValues.MoveToImmutable();
     }
 
     /// <summary>
@@ -766,7 +766,7 @@ public static class Result
             result.Tap(okValues.Add);
         }
 
-        return okValues.DrainToImmutable();
+        return okValues.MoveToImmutable();
     }
 
     /// <summary>
@@ -794,7 +794,7 @@ public static class Result
             result.Tap(okValues.Add);
         }
 
-        return okValues.DrainToImmutable();
+        return okValues.MoveToImmutable();
     }
 
     /// <summary>
@@ -820,7 +820,7 @@ public static class Result
             result.TapError(errors.Add);
         }
 
-        return errors.DrainToImmutable();
+        return errors.MoveToImmutable();
     }
 
     /// <summary>
@@ -848,7 +848,7 @@ public static class Result
             result.TapError(errors.Add);
         }
 
-        return errors.DrainToImmutable();
+        return errors.MoveToImmutable();
     }
 }
 
