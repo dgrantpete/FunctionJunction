@@ -1,4 +1,6 @@
-﻿#if MAIN_PROJECT
+﻿using System.Diagnostics;
+
+#if MAIN_PROJECT
 namespace FunctionJunction.Generator;
 #else
 namespace FunctionJunction.Generator.Internal.Attributes;
@@ -9,6 +11,7 @@ namespace FunctionJunction.Generator.Internal.Attributes;
 /// The top-level class will be defined as the discriminated union type, while nested classes will be defined as derived types of that union.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class)]
+[Conditional(GeneratorDefault.AttributeInclusionSymbol)]
 public class DiscriminatedUnionAttribute : Attribute
 {
     /// <summary>
