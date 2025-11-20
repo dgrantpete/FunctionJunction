@@ -7,15 +7,39 @@ To change this file edit the source file and then run MarkdownSnippets.
 
 # FunctionJunction
 
+[![NuGet](https://img.shields.io/nuget/v/FunctionJunction.svg)](https://www.nuget.org/packages/FunctionJunction/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![.NET](https://img.shields.io/badge/.NET-netstandard2.0%20%7C%20net8.0%20%7C%20net9.0-512BD4)](https://dotnet.microsoft.com/)
+
 ![Logo](https://raw.githubusercontent.com/dgrantpete/FunctionJunction/refs/heads/main/FunctionJunction.png)
 
-A functional programming library for C# that provides Option and Result types, discriminated unions, and functional combinators with comprehensive async support.
+**Opinionated functional helpers for C# that keep your railway-oriented code on track.**
+
+FunctionJunction is a comprehensive functional programming library for C# that provides Option and Result types, discriminated unions, and functional combinators with full async support. Built with modern C# in mind, it leverages source generators for compile-time safety and zero-overhead abstractions.
+
+## Features
+
+- **Option\<T\>** - Represent optional values without null reference exceptions
+- **Result\<TOk, TError\>** - Railway-oriented programming for elegant error handling
+- **Discriminated Unions** - Type-safe sum types with pattern matching via source generation
+- **Comprehensive Async Support** - All operations have async counterparts with `Await` prefix
+- **Iterator Extensions** - Functional LINQ extensions like `SelectWhere`, `Scan`, and `Enumerate`
+- **AOT Compatible** - Works with Native AOT on .NET 7+ for maximum performance
+- **Zero Overhead** - Source generators provide compile-time code generation with no runtime cost
+- **Railway-Oriented Programming** - Chain operations that can fail gracefully
 
 ## Installation
 
 ```bash
 dotnet add package FunctionJunction
 ```
+
+## Target Frameworks
+
+- .NET Standard 2.0 (broad compatibility)
+- .NET 8.0
+- .NET 9.0
+- Native AOT compatible on .NET 7+
 
 ## Core Types
 
@@ -173,3 +197,87 @@ Configure discriminated union generation:
 )]
 public partial record Command { /* ... */ }
 ```
+
+**Options:**
+- `MatchOn` - Controls how pattern matching works (Deconstruct, Type, or None)
+- `GeneratePolymorphicSerialization` - Adds System.Text.Json polymorphic serialization attributes
+- `GeneratePrivateConstructor` - Prevents direct instantiation of the base union type
+
+## Real-World Examples
+
+### API Error Handling
+
+```csharp
+public async Task<Result<User, ApiError>> GetUserAsync(int userId)
+{
+    return await Try<HttpRequestException>
+        .Execute(() => httpClient.GetStringAsync($"/api/users/{userId}"))
+        .MapError(ex => new ApiError.NetworkError(ex.Message))
+        .AwaitFlatMap(json => ParseUser(json))
+        .AwaitValidate(user => user.IsActive, _ => new ApiError.UserInactive())
+        .AwaitMap(EnrichUserData);
+}
+
+var result = await GetUserAsync(123);
+var message = result.Match(
+    onOk: user => $"Welcome {user.Name}!",
+    onError: error => error.Match(
+        onNetworkError: msg => $"Connection failed: {msg}",
+        onUserInactive: () => "User account is inactive",
+        onParseError: msg => $"Invalid data: {msg}"
+    )
+);
+```
+
+### Safe Configuration Reading
+
+```csharp
+public Option<DatabaseConfig> LoadDatabaseConfig()
+{
+    return Option.FromNullable(configuration["ConnectionString"])
+        .Filter(s => !string.IsNullOrWhiteSpace(s))
+        .Map(connStr => new DatabaseConfig(connStr))
+        .Or(() => LoadDefaultConfig());
+}
+
+// Chain multiple optional operations
+var connectionString = LoadDatabaseConfig()
+    .Map(config => config.ConnectionString)
+    .UnwrapOr(() => "Server=localhost;Database=default");
+```
+
+## Why FunctionJunction?
+
+**Railway-Oriented Programming Made Easy**: FunctionJunction embraces the railway-oriented programming pattern, where operations either succeed (staying on the "success track") or fail (switching to the "error track"). This makes error handling explicit, composable, and type-safe.
+
+**Type Safety Without Exceptions**: Instead of throwing exceptions for expected failures, use `Result<TOk, TError>` to make error cases explicit in your type signatures. This forces callers to handle errors and makes your code more predictable.
+
+**No More Null Reference Exceptions**: The `Option<T>` type eliminates null reference exceptions by making the absence of a value explicit. The compiler ensures you handle the None case before accessing the value.
+
+**Zero Runtime Overhead**: Source generators create code at compile-time, so there's no reflection, no runtime code generation, and no performance penalty. Pattern matching on discriminated unions is as fast as a switch statement.
+
+**Async-First Design**: Every operation that makes sense asynchronously has an `Await` variant, making it natural to write clean, composable async code without callback hell.
+
+## Performance
+
+- **Zero-allocation** Option and Result types (structs)
+- **Compile-time** discriminated union code generation
+- **Inlined** method calls for maximum performance
+- **AOT-compatible** for Native AOT scenarios
+- **Trim-friendly** for minimal deployment size
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE.txt](LICENSE.txt) file for details.
+
+## Author
+
+**Grant Peterson** - [dgrantpete](https://github.com/dgrantpete)
+
+## Acknowledgments
+
+Inspired by functional programming patterns from F#, Rust, and other ML-family languages, adapted for idiomatic C#.
